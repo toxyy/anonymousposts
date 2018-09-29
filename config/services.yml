@@ -1,0 +1,11 @@
+services:
+    toxyy.anonymousposts.listener:
+        class: toxyy\anonymousposts\event\listener
+        arguments:
+            - '@template'
+            - '@user'
+            - '@dbal.conn'
+            - '@auth'
+            - '@request'
+        tags:
+            - { name: event.listener }

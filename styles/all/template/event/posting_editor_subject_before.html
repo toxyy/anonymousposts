@@ -1,0 +1,9 @@
+{% if F_ANONPOST && U_ANONPOST %}
+<dl style="clear: left;">
+        <dt><label for="anonpost">{{ lang('ANP_ACTION') }}:</label></dt>
+        <dd>
+                <input type="hidden" name="anonpost" value="0">
+                <input name="anonpost" id="anonpost" type="checkbox" value="1">
+        </dd>
+</dl>
+{% endif %}
