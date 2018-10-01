@@ -306,6 +306,7 @@ class listener implements EventSubscriberInterface
         }
         
         // edit notifications data to account for anonymous submissions
+        // uses custom event made in functions_posting.php lines 2285 - 2296
         public function modify_submit_notification_data($event)
         {
             $notification_data = $event['notification_data'];
