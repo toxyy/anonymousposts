@@ -3,9 +3,14 @@ services:
         class: toxyy\anonymousposts\event\listener
         arguments:
             - '@template'
+            - '@auth'
+            - '@request'
+            - '@toxyy.anonymousposts.helper'
+        tags:
+            - { name: event.listener }
+    toxyy.anonymousposts.helper:
+        class: toxyy\anonymousposts\core\helper
+        arguments:
             - '@user'
             - '@dbal.conn'
             - '@auth'
-            - '@request'
-        tags:
-            - { name: event.listener }

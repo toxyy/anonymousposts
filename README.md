@@ -8,9 +8,7 @@ phpBB 3.2+ PHP 7+
 
 ## Features
 
-
 ## Screenshot
-
 
 ## Quick Install
 
@@ -18,7 +16,7 @@ You can install this on the latest release of phpBB 3.2 by following the steps b
 
 * Create `toxyy/anonymousposts` in the `ext` directory.
 * Download and unpack the repository into `ext/toxyy/anonymousposts`
-* Enable `Show Topic Starter` in the ACP at `Customise -> Manage extensions`.
+* Enable `Anonymous Posts` in the ACP at `Customise -> Manage extensions`.
 
 ## Uninstall
 
