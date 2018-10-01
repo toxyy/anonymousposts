@@ -9,52 +9,46 @@
 
 namespace toxyy\anonymousposts\event;
 
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use phpbb\event\data as event;
-
 /**
 * Event listener
 */
+
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+
 class listener implements EventSubscriberInterface
 {
 	/** @var \phpbb\template\template */
 	protected $template;
-        
-	/** @var \phpbb\user */
-	protected $user;
-
-	/** @var \phpbb\db\driver\driver_interface */
-	protected $db;
 
 	/** @var \phpbb\auth\auth */
 	protected $auth;
         
 	/** @var \phpbb\request\request */
 	protected $request;
+        
+	/** @var \toxyy\anonymousposts\core\helper */
+	protected $helper;
 
 	/**
 	* Constructor
 	*
 	* @param \phpbb\template\template                       $template
-	* @param \phpbb\user                                    $user
-	* @param \phpbb\db\driver\driver_interface              $db
 	* @param \phpbb\auth\auth                               $auth
 	* @param \phpbb\request\request		 		$request
+	* @param \toxyy\anonymousposts\core\helper		$helper
 	*
 	*/
 	public function __construct(
                 \phpbb\template\template $template,
-		\phpbb\user $user,
-		\phpbb\db\driver\driver_interface $db,
 		\phpbb\auth\auth $auth,
-		\phpbb\request\request $request
+		\phpbb\request\request $request,
+                $helper
 	)
 	{
                 $this->template                                 = $template;
-		$this->user					= $user;
-		$this->db					= $db;
 		$this->auth                                     = $auth;
 		$this->request                                  = $request;
+		$this->helper                                   = $helper;
 	}
         
 	static public function getSubscribedEvents()
@@ -63,12 +57,16 @@ class listener implements EventSubscriberInterface
 			'core.user_setup'                               => 'core_user_setup',
 			'core.permissions'                              => 'core_permissions',
                         'core.modify_posting_auth'                      => 'modify_posting_auth',
+                        'core.posting_modify_post_data'                 => 'posting_modify_post_data',
                         'core.viewtopic_assign_template_vars_before'    => 'viewtopic_assign_template_vars_before',
                         'core.viewtopic_post_rowset_data'               => 'viewtopic_post_rowset_data',
                         'core.viewtopic_modify_post_row'                => 'viewtopic_modify_post_row',
+                        'core.viewforum_modify_topics_data'             => 'viewforum_modify_topics_data',
+                        'core.viewforum_modify_topicrow'                => 'viewforum_modify_topicrow',
                         'core.topic_review_modify_row'                  => 'topic_review_modify_row',
 			'core.modify_submit_post_data'                  => 'modify_submit_post_data',
                         'core.submit_post_modify_sql_data'              => 'submit_post_modify_sql_data',
+                        'core.modify_submit_notification_data'          => 'modify_submit_notification_data',
 		];
 	}
 
@@ -96,10 +94,26 @@ class listener implements EventSubscriberInterface
         // add F_ANONPOST variable to posting.php
         public function modify_posting_auth($event)
         {
-            $this->template->assign_vars(array(
-                    'F_ANONPOST'   => $this->auth->acl_get('f_anonpost', $event['forum_id']),
-                    'U_ANONPOST'   => $this->auth->acl_get('u_anonpost'),
-            ));
+                $this->template->assign_vars(array(
+                        'F_ANONPOST'   => $this->auth->acl_get('f_anonpost', $event['forum_id']),
+                        'U_ANONPOST'   => $this->auth->acl_get('u_anonpost'),
+                ));
+        }
+        
+        // change poster information in quotes
+        public function posting_modify_post_data($event)
+        {
+                $post_data = $event['post_data'];
+                
+                $poster_index = $this->helper->get_poster_index($event['topic_id'], $post_data['poster_id']);
+                
+                if($post_data['is_anonymous'])
+                {
+                        $post_data['quote_username'] = "Anonymous " . $poster_index;
+                        $post_data['poster_id'] = 0;
+                }
+
+                $event['post_data'] = $post_data;
         }
         
         // add F_ANONPOST variable to viewtopic.php
@@ -132,38 +146,10 @@ class listener implements EventSubscriberInterface
                 $forum_id = $event['row']['forum_id'];
                 $post_row = $event['post_row'];
                 
-                // thanks juhas https://www.phpbb.com/community/viewtopic.php?f=71&t=2151259#p13117355
-                $admins = $this->auth->acl_get_list(false, 'a_', false);
-                $mods = $this->auth->acl_get_list(false, 'm_', false);
-
-                $is_staff = in_array($this->user->data['user_id'], $admins[0]['a_']);
-                if(!$is_staff)
-                        $is_staff = in_array($this->user->data['user_id'], $mods[0]['m_']);
-                
+                $is_staff = $this->helper->is_staff();
                 $is_anonymous = $event['row']['is_anonymous'];
                 
-                // get a list of unique posters in the topic in time order
-                $poster_list_query = 'SELECT DISTINCT poster_id FROM ' . POSTS_TABLE . '
-                                      WHERE topic_id = ' . $topic_id . '
-                                      AND is_anonymous = 1
-                                      ORDER BY post_time ASC';
-                
-                $result = $poster_list = array();
-                $result = $this->db->sql_query($poster_list_query);
-                
-                // get index of this post in that list
-                $poster_index = 0;
-                $count = 1;
-                while($row = $this->db->sql_fetchrow($result))
-                {
-                        if($row['poster_id'] == $event['poster_id'])
-                                $poster_index = $count;
-                        
-                        $count++;
-                }
-                
-                $this->db->sql_freeresult($result);
-                unset($result);
+                $poster_index = $this->helper->get_poster_index($topic_id, $event['poster_id']);
                 
                 // delete info from the deleted post hidden div so sneaky members cant find out who it was
                 if(!$is_staff && $is_anonymous)
@@ -224,40 +210,57 @@ class listener implements EventSubscriberInterface
                 $event['post_row'] = $post_row;
         }
         
+        // get array of first and last posts, check them for anonymity
+        public function viewforum_modify_topics_data($event)
+        {
+                $rowset = $event['rowset'];
+                
+                $post_list = array_merge(array_column($rowset, 'topic_first_post_id'), array_column($rowset, 'topic_last_post_id'));
+                $is_anonymous_list = $this->helper->is_anonymous($post_list);
+                
+                foreach($rowset as $index => $value) {
+                        $rowset[$index]['topic_first_is_anonymous'] = $is_anonymous_list[$index][0];
+                        $rowset[$index]['topic_last_is_anonymous'] = $is_anonymous_list[$index][1];
+                }
+                
+                $event['rowset'] = $rowset;
+        }
+        
+        // update first and last post in topicrow if they are anonymous
+        public function viewforum_modify_topicrow($event)
+        {
+                $row = $event['row'];
+                $topic_row = $event['topic_row'];
+                $topic_id = $topic_row['TOPIC_ID'];
+                
+                $poster_index = $this->helper->get_poster_index($topic_id, $row['topic_last_poster_id']);
+                
+                if(!$this->helper->is_staff())
+                {
+                        if($row['topic_first_is_anonymous'])
+                        {
+                                $topic_row['TOPIC_AUTHOR'] = $topic_row['TOPIC_AUTHOR_FULL'] = "Anonymous 1";
+                                $topic_row['TOPIC_AUTHOR_COLOUR'] = NULL;
+                        }
+
+                        if($row['topic_last_is_anonymous'])
+                        {
+                                $topic_row['LAST_POST_AUTHOR'] = $topic_row['LAST_POST_AUTHOR_FULL'] = "Anonymous " . $poster_index;
+                                $topic_row['LAST_POST_AUTHOR_COLOUR'] = NULL;
+                        }
+                }
+                
+                $event['topic_row'] = $topic_row;
+        }
+        
         // make posts anonymous in posting.php topic review
         public function topic_review_modify_row($event)
         {
                 $post_row = $event['post_row'];
                 
-                // thanks juhas https://www.phpbb.com/community/viewtopic.php?f=71&t=2151259#p13117355
-                $admins = $this->auth->acl_get_list(false, 'a_', false);
-                $mods = $this->auth->acl_get_list(false, 'm_', false);
-
-                $is_staff = in_array($this->user->data['user_id'], $admins[0]['a_']);
-                if(!$is_staff)
-                        $is_staff = in_array($this->user->data['user_id'], $mods[0]['m_']);
+                $is_staff = $this->helper->is_staff();
                 
-                // same as above
-                $poster_list_query = 'SELECT DISTINCT poster_id FROM ' . POSTS_TABLE . '
-                      WHERE topic_id = ' . $event['topic_id'] . '
-                      AND is_anonymous = 1
-                      ORDER BY post_time ASC';
-                
-                $result = $poster_list = array();
-                $result = $this->db->sql_query($poster_list_query, 1);
-                
-                $poster_index = 0;
-                $count = 1;
-                while($row = $this->db->sql_fetchrow($result))
-                {
-                        if($event['cur_post_id'] == $event['poster_id'])
-                                $poster_index = $count;
-                        
-                        $count++;
-                }
-                
-                $this->db->sql_freeresult($result);
-                unset($result);
+                $poster_index = $this->helper->get_poster_index($event['topic_id'], $event['poster_id']);
                 
                 if(!$is_staff && $event['row']['is_anonymous'])
                 {
@@ -292,10 +295,29 @@ class listener implements EventSubscriberInterface
                 $sql_data = $event['sql_data'];
                 $data = $event['data'];
                 
+                $is_anonymous = isset($data['is_anonymous']) ? $data['is_anonymous'] : 0;
+                
+                $data['is_aonnymous'] = $is_anonymous;
                 $sql_data[POSTS_TABLE]['sql'] = array_merge($sql_data[POSTS_TABLE]['sql'], array(
-                        'is_anonymous'  => isset($data['is_anonymous']) ? $data['is_anonymous'] : 0,
+                        'is_anonymous'  => $is_anonymous,
                 ));
                 
                 $event['sql_data'] = $sql_data;
+        }
+        
+        // edit notifications data to account for anonymous submissions
+        public function modify_submit_notification_data($event)
+        {
+            $notification_data = $event['notification_data'];
+            $data_ary = $event['data_ary'];
+            $mode = $event['mode'];
+            
+            if($data_ary['is_anonymous'] && ($mode == 'post' || $mode == 'reply' || $mode == 'quote'))
+            {
+                    $notification_data['poster_id'] = ANONYMOUS;
+                    $notification_data['post_username'] = "Anonymous " . $this->helper->get_poster_index($data_ary['topic_id'], $event['poster_id']);
+            }
+            
+            $event['notification_data'] = $notification_data;
         }
 }

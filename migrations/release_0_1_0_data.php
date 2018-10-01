@@ -29,30 +29,30 @@ class release_0_1_0_data extends \phpbb\db\migration\migration
 			array('config.add', array('anonymous_posts_version', '0.1.0')),
                     
 			// Add permissions
-			array('permission.add', array('u_anonpost', true)),
-			array('permission.add', array('f_anonpost', false, false)),
+			array('permission.add', array('u_anonpost')),
+			array('permission.add', array('f_anonpost', false)),
 		);
 	}
         
         public function update_schema()
         {
-            return array(
-                'add_columns'        => array(
-                    $this->table_prefix . 'posts'        => array(
-                        'is_anonymous'    => array('BOOL' ,0),
-                    ),
-                ),
-            );
+                return array(
+                        'add_columns'   => array(
+                                $this->table_prefix . 'posts'   => array(
+                                        'is_anonymous'  => array('BOOL', 0),
+                                ),
+                        ),
+                );
         }
         
         public function revert_schema()
         {
-            return array(
-                'drop_columns'        => array(
-                    $this->table_prefix . 'posts'        => array(
-                        'is_anonymous',
-                    ),
-                ),
-            );
+                return array(
+                        'drop_columns'  => array(
+                                $this->table_prefix . 'posts'   => array(
+                                        'is_anonymous',
+                                ),
+                        ),
+                );
         }
 }

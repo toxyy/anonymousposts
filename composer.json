@@ -2,10 +2,10 @@
 	"name": "toxyy/anonymousposts",
 	"type": "phpbb-extension",
 	"description": "Post anonymously in phpbb 3.2",
-	"homepage": "",
-	"version": "0.1.0",
-	"time": "2018-09-28",
-	"keywords": ["phpbb", "extension", "anonymous posts"],
+	"homepage": "https://github.com/toxyy/anonymousposts",
+	"version": "0.2.0",
+	"time": "2018-09-30",
+	"keywords": ["phpbb", "extension", "anonymous", "anonymous posts"],
 	"license": "GPL-2.0",
 	"authors": [{
 			"name": "toxyy",
@@ -14,10 +14,8 @@
 			"role": "Developer"
 		}],
 	"require": {
-		"php": ">=7"
-	},
-	"require-dev": {
-
+		"php": ">=7",
+                "marttiphpbb/phpbb-ext-grouptempvars": "0.2.0"
 	},
 	"extra": {
 		"display-name": "Anonymous Posts",
@@ -27,7 +25,8 @@
 		"version-check": {
 			"host": "toxyy.github.io",
 			"directory": "/version",
-			"filename": "anonymousposts.json"
+			"filename": "anonymousposts.json",
+                        "ssl": 1
 		}
 	}
 }
