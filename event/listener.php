@@ -218,7 +218,11 @@ class listener implements EventSubscriberInterface
                 $post_list = array_merge(array_column($rowset, 'topic_first_post_id'), array_column($rowset, 'topic_last_post_id'));
                 $is_anonymous_list = $this->helper->is_anonymous($post_list);
                 
-                foreach($rowset as $index => $value) {
+                foreach($rowset as $index => $value)
+                {
+                        // fix last post null issue if topic has no replies
+                        if($is_anonymous_list[$index][1] == NULL) $is_anonymous_list[$index][1] = $is_anonymous_list[$index][0];
+                        
                         $rowset[$index]['topic_first_is_anonymous'] = $is_anonymous_list[$index][0];
                         $rowset[$index]['topic_last_is_anonymous'] = $is_anonymous_list[$index][1];
                 }
