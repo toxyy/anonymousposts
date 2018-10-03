@@ -15,7 +15,7 @@
 		}],
 	"require": {
 		"php": ">=7",
-                "marttiphpbb/phpbb-ext-grouptempvars": "0.3.0"
+                "marttiphpbb/phpbb-ext-grouptempvars": "0.2.0"
 	},
 	"extra": {
 		"display-name": "Anonymous Posts",
