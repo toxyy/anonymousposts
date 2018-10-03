@@ -19,6 +19,7 @@ if (empty($lang) || !is_array($lang))
 }
 
 $lang = array_merge($lang, [
+	'ANP_DEFAULT'       => 'Anonymous',
 	'ANP_MESSAGE'       => 'Anonymous post',
 	'ANP_ACTION'        => 'Post Anonymously',
         'ANP_PERMISSIONS'   => 'Can post anonymously',

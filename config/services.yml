@@ -2,6 +2,7 @@ services:
     toxyy.anonymousposts.listener:
         class: toxyy\anonymousposts\event\listener
         arguments:
+            - '@language'
             - '@template'
             - '@auth'
             - '@request'

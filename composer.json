@@ -3,8 +3,8 @@
 	"type": "phpbb-extension",
 	"description": "Post anonymously in phpbb 3.2",
 	"homepage": "https://github.com/toxyy/anonymousposts",
-	"version": "0.2.0",
-	"time": "2018-09-30",
+	"version": "0.3.0",
+	"time": "2018-10-03",
 	"keywords": ["phpbb", "extension", "anonymous", "anonymous posts"],
 	"license": "GPL-2.0",
 	"authors": [{
@@ -15,7 +15,7 @@
 		}],
 	"require": {
 		"php": ">=7",
-                "marttiphpbb/phpbb-ext-grouptempvars": "0.2.0"
+                "marttiphpbb/phpbb-ext-grouptempvars": "0.3.0"
 	},
 	"extra": {
 		"display-name": "Anonymous Posts",

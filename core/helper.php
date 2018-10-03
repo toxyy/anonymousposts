@@ -49,7 +49,7 @@ class helper
                                       ORDER BY post_time ASC';
                 
                 $result = $poster_list = array();
-                $result = $this->db->sql_query($poster_list_query, 1);
+                $result = $this->db->sql_query($poster_list_query);
                 
                 // get index of this post in that list
                 $poster_index = 0;
@@ -83,24 +83,56 @@ class helper
         }
         
         // get data from topicrow to use in the event to change it
-        public function is_anonymous($post_list)
-        {
-                $is_anonymous_query = 'SELECT is_anonymous, post_id, topic_id
+        // supports two modes, t and f (topic and forum)
+        // topic mode returns first and last post in pairs [0] and [1] in the array
+        // forum mode returns last post and topic id in pairs [0] and [1]
+        public function is_anonymous($post_list, $mode)
+        {       // this supports viewforum and viewtopic
+                $array_key = $mode == 't' ? 'topic_id' : 'topic_id, forum_id';
+                
+                $is_anonymous_query = 'SELECT is_anonymous, post_id, ' . $array_key . '
                                         FROM ' . POSTS_TABLE . '
                                         WHERE post_id IN (' . implode(",", $post_list) . ')
                                         ORDER BY post_id ASC';
                 
                 $result = $is_anonymous_list = array();
                 $result = $this->db->sql_query($is_anonymous_query);
+
+                $array_key = $mode == 'f' ? 'forum_id' : $array_key;
                 
                 while($row = $this->db->sql_fetchrow($result))
                 {
-                        $is_anonymous_list[$row['topic_id']][] = $row['is_anonymous'];
+                        $is_anonymous_list[$row[$array_key]][] = $row['is_anonymous'];
+                        
+                        if($mode == 'f')
+                            $is_anonymous_list[$row[$array_key]][1] = $row['topic_id'];
                 }
                         
                 $this->db->sql_freeresult($result);
                 unset($result);
                 
                 return $is_anonymous_list;
+        }
+        
+        public function get_poster_id($post_id)
+        {
+                // get a list of unique posters in the topic in time order
+                $poster_id_query = 'SELECT poster_id FROM ' . POSTS_TABLE . '
+                                      WHERE post_id = ' . $post_id;
+                
+                $result = array();
+                $result = $this->db->sql_query($poster_id_query);
+                
+                $poster_id = 0;
+                
+                while($row = $this->db->sql_fetchrow($result))
+                {
+                        $poster_id = $row['poster_id'];
+                }
+                
+                $this->db->sql_freeresult($result);
+                unset($result);
+                
+                return $poster_id;
         }
 }

@@ -17,6 +17,9 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class listener implements EventSubscriberInterface
 {
+	/** @var \phpbb\language\language */
+	protected $language;
+        
 	/** @var \phpbb\template\template */
 	protected $template;
 
@@ -39,12 +42,14 @@ class listener implements EventSubscriberInterface
 	*
 	*/
 	public function __construct(
+                \phpbb\language\language $language,
                 \phpbb\template\template $template,
 		\phpbb\auth\auth $auth,
 		\phpbb\request\request $request,
                 $helper
 	)
 	{
+                $this->language                                 = $language;
                 $this->template                                 = $template;
 		$this->auth                                     = $auth;
 		$this->request                                  = $request;
@@ -63,7 +68,11 @@ class listener implements EventSubscriberInterface
                         'core.viewtopic_modify_post_row'                => 'viewtopic_modify_post_row',
                         'core.viewforum_modify_topics_data'             => 'viewforum_modify_topics_data',
                         'core.viewforum_modify_topicrow'                => 'viewforum_modify_topicrow',
+                        'core.display_forums_before'                    => 'display_forums_before',
                         'core.topic_review_modify_row'                  => 'topic_review_modify_row',
+                        'core.search_modify_rowset'                     => 'search_modify_rowset',
+                        'core.search_modify_post_row'                   => 'search_modify_post_row',
+                        'core.search_modify_tpl_ary'                    => 'search_modify_tpl_ary',
 			'core.modify_submit_post_data'                  => 'modify_submit_post_data',
                         'core.submit_post_modify_sql_data'              => 'submit_post_modify_sql_data',
                         'core.modify_submit_notification_data'          => 'modify_submit_notification_data',
@@ -105,11 +114,10 @@ class listener implements EventSubscriberInterface
         {
                 $post_data = $event['post_data'];
                 
-                $poster_index = $this->helper->get_poster_index($event['topic_id'], $post_data['poster_id']);
-                
                 if($post_data['is_anonymous'])
                 {
-                        $post_data['quote_username'] = "Anonymous " . $poster_index;
+                        $poster_index = $this->helper->get_poster_index($event['topic_id'], $post_data['poster_id']);
+                        $post_data['quote_username'] = $this->language->lang('ANP_DEFAULT') . ' ' . $poster_index;
                         $post_data['poster_id'] = 0;
                 }
 
@@ -155,7 +163,7 @@ class listener implements EventSubscriberInterface
                 if(!$is_staff && $is_anonymous)
                 {       $post_row_old = $post_row;
                         $post_row = array_map(create_function('$n', 'return null;'), $post_row);
-                        $post_row['POST_AUTHOR_FULL'] = $post_row['POST_AUTHOR'] = "Anonymous " . $poster_index;
+                        $post_row['POST_AUTHOR_FULL'] = $post_row['POST_AUTHOR'] = $this->language->lang('ANP_DEFAULT') . ' ' . $poster_index;
                         $post_row['POST_DATE'] = $post_row_old['POST_DATE'];
                         $post_row['MESSAGE'] = $post_row_old['MESSAGE'];
                         $post_row['POST_SUBJECT'] = $post_row_old['POST_SUBJECT'];
@@ -216,7 +224,7 @@ class listener implements EventSubscriberInterface
                 $rowset = $event['rowset'];
                 
                 $post_list = array_merge(array_column($rowset, 'topic_first_post_id'), array_column($rowset, 'topic_last_post_id'));
-                $is_anonymous_list = $this->helper->is_anonymous($post_list);
+                $is_anonymous_list = $this->helper->is_anonymous($post_list, 't');
                 
                 foreach($rowset as $index => $value)
                 {
@@ -235,26 +243,55 @@ class listener implements EventSubscriberInterface
         {
                 $row = $event['row'];
                 $topic_row = $event['topic_row'];
-                $topic_id = $topic_row['TOPIC_ID'];
-                
-                $poster_index = $this->helper->get_poster_index($topic_id, $row['topic_last_poster_id']);
+                $anonymous = $this->language->lang('ANP_DEFAULT');
                 
                 if(!$this->helper->is_staff())
                 {
                         if($row['topic_first_is_anonymous'])
                         {
-                                $topic_row['TOPIC_AUTHOR'] = $topic_row['TOPIC_AUTHOR_FULL'] = "Anonymous 1";
+                                $topic_row['TOPIC_AUTHOR'] = $topic_row['TOPIC_AUTHOR_FULL'] = $anonymous . ' 1';
                                 $topic_row['TOPIC_AUTHOR_COLOUR'] = NULL;
                         }
 
                         if($row['topic_last_is_anonymous'])
                         {
-                                $topic_row['LAST_POST_AUTHOR'] = $topic_row['LAST_POST_AUTHOR_FULL'] = "Anonymous " . $poster_index;
+                                $poster_index = $this->helper->get_poster_index($topic_row['TOPIC_ID'], $row['topic_last_poster_id']);
+                                $topic_row['LAST_POST_AUTHOR'] = $topic_row['LAST_POST_AUTHOR_FULL'] = $anonymous . ' ' . $poster_index;
                                 $topic_row['LAST_POST_AUTHOR_COLOUR'] = NULL;
                         }
                 }
                 
                 $event['topic_row'] = $topic_row;
+        }
+        
+        // handles changing the last poster name for forumrow
+        public function display_forums_before($event)
+        {
+                $forum_rows = $event['forum_rows'];
+                
+                $post_list = array_merge(array_column($forum_rows, 'forum_last_post_id'));
+                $is_anonymous_list = $this->helper->is_anonymous($post_list, 'f');
+                
+                foreach($forum_rows as $index => $value)
+                {
+                        $last_post_id = $forum_rows[$index]['forum_last_post_id'];
+                        $post_list_index = array_search($last_post_id, $post_list);
+                        
+                        if($post_list_index > 0)
+                        {
+                                $forum_rows[$index]['forum_last_is_anonymous'] = $is_anonymous_list[$index][0];
+                                $topic_id = $is_anonymous_list[$index][1];
+                                
+                                if($forum_rows[$index]['forum_last_is_anonymous'])
+                                {
+                                        $poster_index = $this->helper->get_poster_index($topic_id, $forum_rows[$index]['forum_last_poster_id']);
+                                        $forum_rows[$index]['forum_last_poster_name'] = $this->language->lang('ANP_DEFAULT') . ' ' . $poster_index;
+                                        $forum_rows[$index]['forum_last_poster_colour'] = $forum_rows[$index]['forum_last_poster_id'] = NULL;
+                                }
+                        }
+                }
+                
+                $event['forum_rows'] = $forum_rows;
         }
         
         // make posts anonymous in posting.php topic review
@@ -264,11 +301,10 @@ class listener implements EventSubscriberInterface
                 
                 $is_staff = $this->helper->is_staff();
                 
-                $poster_index = $this->helper->get_poster_index($event['topic_id'], $event['poster_id']);
-                
                 if(!$is_staff && $event['row']['is_anonymous'])
                 {
-                        $post_row['POST_AUTHOR_FULL'] = $post_row['POST_AUTHOR'] = $post_row['POSTER_QUOTE'] = "Anonymous " . $poster_index;
+                        $poster_index = $this->helper->get_poster_index($event['topic_id'], $event['poster_id']);
+                        $post_row['POST_AUTHOR_FULL'] = $post_row['POST_AUTHOR'] = $post_row['POSTER_QUOTE'] = $this->language->lang('ANP_DEFAULT') . ' ' . $poster_index;
                         $post_row['POST_AUTHOR_COLOUR'] = $post_row['U_POST_AUTHOR'] = 
                         $post_row['S_FRIEND'] = $post_row['USER_ID'] = NULL;
                 }
@@ -277,6 +313,77 @@ class listener implements EventSubscriberInterface
                 $post_row['IS_ANONYMOUS'] = $event['row']['is_anonymous'];
                 
                 $event['post_row'] = $post_row;
+        }
+        
+        // add array of data for the topicrow in searches for if first/last post are anonymous
+        public function search_modify_rowset($event)
+        {
+                $rowset = $event['rowset'];
+                
+                $post_list = array_merge(array_column($rowset, 'topic_first_post_id'), array_column($rowset, 'topic_last_post_id'));
+                $is_anonymous_list = $this->helper->is_anonymous($post_list, 't');
+                
+                foreach($rowset as $index => $value)
+                {
+                        // fix last post null issue if topic has no replies
+                        if($is_anonymous_list[$index][1] == NULL) $is_anonymous_list[$index][1] = $is_anonymous_list[$index][0];
+                        
+                        $rowset[$index]['topic_first_is_anonymous'] = $is_anonymous_list[$index][0];
+                        $rowset[$index]['topic_last_is_anonymous'] = $is_anonymous_list[$index][1];
+                }
+                
+                $event['rowset'] = $rowset;
+        }
+        
+        // edit data to change postrow username
+        public function search_modify_post_row($event)
+        {
+                $row = $event['row'];
+                
+                $is_staff = $this->helper->is_staff();
+                
+                if(!$is_staff && $event['row']['is_anonymous'])
+                {
+                        $poster_index = $this->helper->get_poster_index($row['topic_id'], $row['poster_id']);
+                        $row['username'] = $row['username_clean'] = $this->language->lang('ANP_DEFAULT') . ' ' . $poster_index;
+                        // 0 turns the post into a guest which achieves no url link, but haven't gotten around guest renaming, so negative works for now
+                        $row['poster_id'] = -1;
+                        $row['user_colour'] = $row['user_id'] = $row['user_sig'] =
+                        $row['enable_sig'] = NULL;
+                }
+                
+                $row['IS_STAFF'] = $is_staff;
+                $row['IS_ANONYMOUS'] = $event['row']['is_anonymous'];
+                
+                $event['row'] = $row;
+        }
+        
+        // modify each search topicrow as done in the forumrow
+        public function search_modify_tpl_ary($event)
+        {
+                $tpl_ary = $event['tpl_ary'];
+                $row = $event['row'];
+                
+                $is_staff = $this->helper->is_staff();
+                $anonymous = $this->language->lang('ANP_DEFAULT');
+                
+                if(!$is_staff)
+                {
+                        if($row['topic_first_is_anonymous'])
+                        {
+                                $tpl_ary['TOPIC_AUTHOR'] = $tpl_ary['TOPIC_AUTHOR_FULL'] = $anonymous . ' 1';
+                                $tpl_ary['TOPIC_AUTHOR_COLOUR'] = NULL;
+                        }
+
+                        if($row['topic_last_is_anonymous'])
+                        {
+                                $poster_index = $this->helper->get_poster_index($row['topic_id'], $row['topic_last_poster_id']);
+                                $tpl_ary['LAST_POST_AUTHOR'] = $tpl_ary['LAST_POST_AUTHOR_FULL'] = $anonymous . ' ' . $poster_index;
+                                $tpl_ary['LAST_POST_AUTHOR_COLOUR'] = NULL;
+                        }
+                }
+                
+                $event['tpl_ary'] = $tpl_ary;
         }
         
         // add variables to $data for use in submit_post_modify_sql_data
@@ -301,7 +408,10 @@ class listener implements EventSubscriberInterface
                 
                 $is_anonymous = isset($data['is_anonymous']) ? $data['is_anonymous'] : 0;
                 
-                $data['is_aonnymous'] = $is_anonymous;
+                // fix poster id getting deleted from sql data
+                if($event['post_mode'] == "edit" && $is_anonymous)
+                        $sql_data[POSTS_TABLE]['sql']['poster_id'] = $this->helper->get_poster_id($data['post_id']);
+                
                 $sql_data[POSTS_TABLE]['sql'] = array_merge($sql_data[POSTS_TABLE]['sql'], array(
                         'is_anonymous'  => $is_anonymous,
                 ));
