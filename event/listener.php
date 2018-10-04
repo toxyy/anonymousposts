@@ -118,8 +118,6 @@ class listener implements EventSubscriberInterface
                         'POST_IS_ANONYMOUS' => $post_data['is_anonymous'] ? 'checked' : '',
                 ));
                 
-                var_dump($post_data);
-                
                 if($post_data['is_anonymous'])
                 {
                         $poster_index = $this->helper->get_poster_index($event['topic_id'], $post_data['poster_id']);
