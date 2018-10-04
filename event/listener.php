@@ -114,6 +114,12 @@ class listener implements EventSubscriberInterface
         {
                 $post_data = $event['post_data'];
                 
+                $this->template->assign_vars(array(
+                        'POST_IS_ANONYMOUS' => $post_data['is_anonymous'] ? 'checked' : '',
+                ));
+                
+                var_dump($post_data);
+                
                 if($post_data['is_anonymous'])
                 {
                         $poster_index = $this->helper->get_poster_index($event['topic_id'], $post_data['poster_id']);
@@ -408,7 +414,7 @@ class listener implements EventSubscriberInterface
                 
                 $is_anonymous = isset($data['is_anonymous']) ? $data['is_anonymous'] : 0;
                 // fix poster id getting deleted from sql data
-                if($is_anonymous && ($event['post_mode'] == "edit" || $event['post_mode'] == "edit_topic"))
+                if(($sql_data[POSTS_TABLE]['sql']['poster_id'] == 0) && ($event['post_mode'] == "edit" || $event['post_mode'] == "edit_topic"))
                         $sql_data[POSTS_TABLE]['sql']['poster_id'] = $this->helper->get_poster_id($data['post_id']);
                 
                 $sql_data[POSTS_TABLE]['sql'] = array_merge($sql_data[POSTS_TABLE]['sql'], array(

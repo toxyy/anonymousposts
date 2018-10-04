@@ -3,7 +3,7 @@
 	"type": "phpbb-extension",
 	"description": "Post anonymously in phpbb 3.2",
 	"homepage": "https://github.com/toxyy/anonymousposts",
-	"version": "0.3.5",
+	"version": "0.3.7",
 	"time": "2018-10-03",
 	"keywords": ["phpbb", "extension", "anonymous", "anonymous posts"],
 	"license": "GPL-2.0",
