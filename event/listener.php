@@ -412,8 +412,18 @@ class listener implements EventSubscriberInterface
                 
                 $is_anonymous = isset($data['is_anonymous']) ? $data['is_anonymous'] : 0;
                 // fix poster id getting deleted from sql data
-                if(($sql_data[POSTS_TABLE]['sql']['poster_id'] == 0) && ($event['post_mode'] == "edit" || $event['post_mode'] == "edit_topic"))
-                        $sql_data[POSTS_TABLE]['sql']['poster_id'] = $this->helper->get_poster_id($data['post_id']);
+                if($sql_data[POSTS_TABLE]['sql']['poster_id'] == 0)
+                {
+                        switch($event['post_mode'])
+                        {
+                                case 'edit_first_post':
+                                case 'edit':
+                                case 'edit_last_post':
+                                case 'edit_topic':
+                                        $sql_data[POSTS_TABLE]['sql']['poster_id'] = $this->helper->get_poster_id($data['post_id']);
+                                break;
+                        }
+                }
                 
                 $sql_data[POSTS_TABLE]['sql'] = array_merge($sql_data[POSTS_TABLE]['sql'], array(
                         'is_anonymous'  => $is_anonymous,
