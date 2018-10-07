@@ -309,7 +309,7 @@ class listener implements EventSubscriberInterface
 
                 if(!$is_staff && $event['row']['is_anonymous'])
                 {
-                        $poster_index = $this->helper->get_poster_index($event['topic_id'], $event['poster_id']);
+                        $poster_index = $this->helper->get_poster_index($event['topic_id'], $event['row']['poster_id']);
                         $post_row['POST_AUTHOR_FULL'] = $post_row['POST_AUTHOR'] = $post_row['POSTER_QUOTE'] = $this->language->lang('ANP_DEFAULT') . ' ' . $poster_index;
                         $post_row['POST_AUTHOR_COLOUR'] = $post_row['U_POST_AUTHOR'] =
                         $post_row['S_FRIEND'] = $post_row['USER_ID'] = NULL;
