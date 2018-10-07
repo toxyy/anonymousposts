@@ -1,10 +1,10 @@
 <?php
 /**
-* 
+*
 * phpBB Extension - toxyy Anonymous Posts
 * @copyright (c) 2018 toxyy <thrashtek@yahoo.com>
 * @license GNU General Public License, version 2 (GPL-2.0)
-* 
+*
 */
 
 if (!defined('IN_PHPBB'))

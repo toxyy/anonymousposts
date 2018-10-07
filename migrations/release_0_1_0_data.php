@@ -27,13 +27,13 @@ class release_0_1_0_data extends \phpbb\db\migration\migration
 			array('config.add', array('anonymous_posts_type', 'y')),
 			array('config.add', array('anonymous_posts_time', '365')),
 			array('config.add', array('anonymous_posts_version', '0.1.0')),
-                    
+
 			// Add permissions
 			array('permission.add', array('u_anonpost')),
 			array('permission.add', array('f_anonpost', false)),
 		);
 	}
-        
+
         public function update_schema()
         {
                 return array(
@@ -44,7 +44,7 @@ class release_0_1_0_data extends \phpbb\db\migration\migration
                         ),
                 );
         }
-        
+
         public function revert_schema()
         {
                 return array(

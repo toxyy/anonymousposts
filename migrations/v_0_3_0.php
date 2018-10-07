@@ -15,7 +15,7 @@ class v_0_3_0 extends \phpbb\db\migration\migration
 	{
 		return isset($this->config['anonymous_posts']);
 	}
-        
+
 	static public function depends_on()
 	{
 		return array('\toxyy\anonymousposts\migrations\v_0_2_0');
