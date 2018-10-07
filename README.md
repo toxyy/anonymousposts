@@ -5,6 +5,7 @@
 ## Requirements
 
 phpBB 3.2.4-RC1+ PHP 7+ (ticket 15819)
+
 martti's Group Template Variables (https://www.phpbb.com/community/viewtopic.php?f=456&t=2325391)
 
 ## Features
@@ -24,21 +25,21 @@ Turkish language supported, multiple styles soon to be supported.
 
 ## Screenshot
 
-https://i.snag.gy/J6qsbE.jpg
+![alt text](https://i.snag.gy/J6qsbE.jpg)
 
-https://i.snag.gy/jfS8NP.jpg
+![alt text](https://i.snag.gy/jfS8NP.jpg)
 
-https://i.snag.gy/esmnia.jpg
+![alt text](https://i.snag.gy/esmnia.jpg)
 
-https://i.snag.gy/XnmsLf.jpg
+![alt text](https://i.snag.gy/XnmsLf.jpg)
 
-https://i.snag.gy/A6Bd7g.jpg
+![alt text](https://i.snag.gy/A6Bd7g.jpg)
 
-https://i.snag.gy/bsftYz.jpg
+![alt text](https://i.snag.gy/bsftYz.jpg)
 
-https://i.snag.gy/3Z84rf.jpg
+![alt text](https://i.snag.gy/3Z84rf.jpg)
 
-https://i.snag.gy/qrMX6B.jpg
+![alt text](https://i.snag.gy/qrMX6B.jpg)
 
 ## Quick Install
 
