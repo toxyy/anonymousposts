@@ -181,6 +181,8 @@ class listener implements EventSubscriberInterface
                                 $post_row['SIGNATURE'] = $post_row['POSTER_AGE'] = $post_row['POSTER_WARNINGS'] =
                                 $post_row['POSTER_AVATAR'] = $post_row['POSTER_POSTS'] = $post_row['POSTER_JOINED'] =
                                 $post_row['RANK_IMG_SRC'] = $post_row['RANK_IMG'] = $post_row['RANK_TITLE'] =
+                                // next 3 add support for the Normal and Special Ranks extension
+                                $post_row['EXTRA_RANK_IMG_SRC'] = $post_row['EXTRA_RANK_IMG'] = $post_row['EXTRA_RANK_TITLE'] =
                                 $post_row['U_POST_AUTHOR'] = $event['user_poster_data'] = $event['cp_row'] = NULL;
                 }
 
