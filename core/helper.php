@@ -82,13 +82,19 @@ class helper
                 return $is_staff;
         }
 
-        // get data from topicrow to use in the event to change it
-        // supports two modes, t and f (topic and forum)
-        // topic mode returns first and last post in pairs [0] and [1] in the array
-        // forum mode returns last post and topic id in pairs [0] and [1]
-        public function is_anonymous($post_list, $mode)
+        /**
+        * get data from topicrow to use in the event to change it
+        * supports three modes: t (default), f, and n (topic, forum, and notification)
+        * topic mode returns first and last post checked in pairs [0] and [1] in the array
+        * forum mode returns last post checked and topic id in pairs [0] and [1]
+        * notification mode returns post_id checked and username in pairs [0] and [1]
+        */
+        public function is_anonymous($post_list, $mode = 't')
         {       // this supports viewforum and viewtopic
-                $array_key = $mode == 't' ? 'topic_id' : 'topic_id, forum_id';
+                $array_key = $mode == 'f' ? 'topic_id, forum_id'
+                            : ($mode == 'n' ? 'poster_id'
+                            // default case (t)
+                            : 'topic_id');
 
                 $is_anonymous_query = 'SELECT is_anonymous, post_id, ' . $array_key . '
                                         FROM ' . POSTS_TABLE . '
@@ -100,11 +106,32 @@ class helper
 
                 $array_key = $mode == 'f' ? 'forum_id' : $array_key;
 
+                $index = 0;
                 while($row = $this->db->sql_fetchrow($result))
                 {
-                        $is_anonymous_list[$row[$array_key]][] = $row['is_anonymous'];
+                        $is_anonymous_list[$mode == 'n' ? $index : $row[$array_key]][] = $row['is_anonymous'];
+
+                        if($mode == 'n')
+                        {
+                                $username_query = 'SELECT username FROM ' . USERS_TABLE . '
+                                                    WHERE user_id = ' . $row['poster_id'];
+
+                                $result2 = array();
+                                $result2 = $this->db->sql_query($username_query);
+
+                                $username = '';
+
+                                while($row = $this->db->sql_fetchrow($result2)) $username = $row['username'];
+
+                                $this->db->sql_freeresult($result2);
+                                unset($result2);
+
+                                $is_anonymous_list[$index][1] = $username;
+                        }
 
                         if($mode == 'f') $is_anonymous_list[$row[$array_key]][1] = $row['topic_id'];
+
+                        $index++;
                 }
 
                 $this->db->sql_freeresult($result);

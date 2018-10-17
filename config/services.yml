@@ -6,6 +6,7 @@ services:
             - '@template'
             - '@auth'
             - '@request'
+            - '@notification_manager'
             - '@toxyy.anonymousposts.helper'
         tags:
             - { name: event.listener }

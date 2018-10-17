@@ -29,6 +29,9 @@ class listener implements EventSubscriberInterface
 	/** @var \phpbb\request\request */
 	protected $request;
 
+	/** @var \phpbb\notification\manager */
+	protected $notification_manager;
+
 	/** @var \toxyy\anonymousposts\core\helper */
 	protected $helper;
 
@@ -38,6 +41,7 @@ class listener implements EventSubscriberInterface
 	* @param \phpbb\template\template                       $template
 	* @param \phpbb\auth\auth                               $auth
 	* @param \phpbb\request\request		 		$request
+	* @param phpbb\notification\manager		 	$notification_manager
 	* @param \toxyy\anonymousposts\core\helper		$helper
 	*
 	*/
@@ -46,6 +50,7 @@ class listener implements EventSubscriberInterface
                 \phpbb\template\template $template,
 		\phpbb\auth\auth $auth,
 		\phpbb\request\request $request,
+		\phpbb\notification\manager $notification_manager,
                 $helper
 	)
 	{
@@ -53,6 +58,7 @@ class listener implements EventSubscriberInterface
                 $this->template                                 = $template;
 		$this->auth                                     = $auth;
 		$this->request                                  = $request;
+		$this->notification_manager                     = $notification_manager;
 		$this->helper                                   = $helper;
 	}
 
@@ -164,56 +170,18 @@ class listener implements EventSubscriberInterface
 
                 // delete info from the deleted post hidden div so sneaky members cant find out who it was
                 if(!$is_staff && $is_anonymous)
-                {       $poster_index = $this->helper->get_poster_index($topic_id, $event['poster_id']);
-                        $post_row_old = $post_row;
-                        $post_row = array_map(create_function('$n', 'return null;'), $post_row);
-                        $post_row['POST_AUTHOR_FULL'] = $post_row['POST_AUTHOR'] = $this->language->lang('ANP_DEFAULT') . ' ' . $poster_index;
-                        $post_row['POST_DATE'] = $post_row_old['POST_DATE'];
-                        $post_row['MESSAGE'] = $post_row_old['MESSAGE'];
-                        $post_row['POST_SUBJECT'] = $post_row_old['POST_SUBJECT'];
-                        $post_row['EDITED_MESSAGE'] = $post_row_old['EDITED_MESSAGE'];
-                        $post_row['EDIT_REASON'] = $post_row_old['EDIT_REASON'];
-                        $post_row['DELETED_MESSAGE'] = $post_row_old['DELETED_MESSAGE'];
-                        $post_row['DELETE_REASON'] = $post_row_old['DELETE_REASON'];
-                        $post_row['BUMPED_MESSAGE'] = $post_row_old['BUMPED_MESSAGE'];
-                        $post_row['MINI_POST_IMG'] = $post_row_old['MINI_POST_IMG'];
-                        $post_row['U_EDIT'] = $post_row_old['U_EDIT'];
-                        $post_row['U_QUOTE'] = $post_row_old['U_QUOTE'];
-                        $post_row['U_DELETE'] = $post_row_old['U_DELETE'];
-                        $post_row['U_INFO'] = $post_row_old['U_INFO'];
-                        $post_row['U_REPORT'] = $post_row_old['U_REPORT'];
-                        $post_row['U_APPROVE_ACTION'] = $post_row_old['U_APPROVE_ACTION'];
-                        $post_row['U_MCP_REPORT'] = $post_row_old['U_MCP_REPORT'];
-                        $post_row['U_MCP_APPROVE'] = $post_row_old['U_MCP_APPROVE'];
-                        $post_row['U_MCP_RESTORE'] = $post_row_old['U_MCP_RESTORE'];
-                        $post_row['POST_ICON_IMG'] = $post_row_old['POST_ICON_IMG'];
-                        $post_row['POST_ICON_IMG_WIDTH'] = $post_row_old['POST_ICON_IMG_WIDTH'];
-                        $post_row['POST_ICON_IMG_HEIGHT'] = $post_row_old['POST_ICON_IMG_HEIGHT'];
-                        $post_row['POST_ICON_IMG_ALT'] = $post_row_old['POST_ICON_IMG_ALT'];
-                        $post_row['POST_NUMBER'] = $post_row_old['POST_NUMBER'];
-                        $post_row['MINI_POST'] = $post_row_old['MINI_POST'];
-                        $post_row['S_HAS_ATTACHMENTS'] = $post_row_old['S_HAS_ATTACHMENTS'];
-                        $post_row['S_MULTIPLE_ATTACHMENTS'] = $post_row_old['S_MULTIPLE_ATTACHMENTS'];
-                        $post_row['S_POST_UNAPPROVED'] = $post_row_old['S_POST_UNAPPROVED'];
-                        $post_row['S_POST_DELETED'] = $post_row_old['S_POST_DELETED'];
-                        $post_row['L_POST_DELETED_MESSAGE'] = $post_row_old['L_POST_DELETED_MESSAGE'];
-                        $post_row['S_POST_REPORTED'] = $post_row_old['S_POST_REPORTED'];
-                        $post_row['S_UNREAD_POST'] = $post_row_old['S_UNREAD_POST'];
-                        $post_row['S_DELETE_PERMANENT'] = $post_row_old['S_DELETE_PERMANENT'];
-                        $post_row['U_MINI_POST'] = $post_row_old['U_MINI_POST'];
-                        $post_row['U_NEXT_POST_ID'] = $post_row_old['U_NEXT_POST_ID'];
-                        $post_row['U_NOTES'] = $post_row_old['U_NOTES'];
-                        $post_row['U_WARN'] = $post_row_old['U_WARN'];
-                        $post_row['S_FIRST_UNREAD'] = $post_row_old['S_FIRST_UNREAD'];
-                        $post_row['S_POST_HIDDEN'] = $post_row_old['S_POST_HIDDEN'];
-                        $post_row['U_PREV_POST_ID'] = $post_row_old['U_PREV_POST_ID'];
-                        $post_row['L_POST_DISPLAY'] = $post_row_old['L_POST_DISPLAY'];
-                        $post_row['S_POST_HIDDEN'] = $post_row_old['S_POST_HIDDEN'];
-                        $post_row['L_IGNORE_POST'] = $post_row_old['L_IGNORE_POST'];
-                        $post_row['S_IGNORE_POST'] = $post_row_old['S_IGNORE_POST'];
-                        $post_row['S_TOPIC_POSTER'] = $post_row_old['S_TOPIC_POSTER'];
-                        $post_row['S_DISPLAY_NOTICE'] = $post_row_old['S_DISPLAY_NOTICE'];
-                        unset($post_row_old);
+                {
+                        $poster_index = $this->helper->get_poster_index($topic_id, $event['poster_id']);
+                        $post_row['POST_AUTHOR_FULL'] = $post_row['POST_AUTHOR'] =
+                                $post_row['CONTACT_USER'] = $this->language->lang('ANP_DEFAULT') . ' ' . $poster_index;
+
+                        $post_row['S_CUSTOM_FIELDS'] = $post_row['S_FRIEND'] = $post_row['POSTER_ID'] =
+                                $post_row['U_JABBER'] = $post_row['U_EMAIL'] = $post_row['U_PM'] =
+                                $post_row['U_SEARCH'] = $post_row['S_ONLINE'] = $post_row['ONLINE_IMG'] =
+                                $post_row['SIGNATURE'] = $post_row['POSTER_AGE'] = $post_row['POSTER_WARNINGS'] =
+                                $post_row['POSTER_AVATAR'] = $post_row['POSTER_POSTS'] = $post_row['POSTER_JOINED'] =
+                                $post_row['RANK_IMG_SRC'] = $post_row['RANK_IMG'] = $post_row['RANK_TITLE'] =
+                                $post_row['U_POST_AUTHOR'] = $event['user_poster_data'] = $event['cp_row'] = NULL;
                 }
 
                 $post_row['IS_ANONYMOUS'] = $is_anonymous;
@@ -228,7 +196,7 @@ class listener implements EventSubscriberInterface
                 $rowset = $event['rowset'];
 
                 $post_list = array_merge(array_column($rowset, 'topic_first_post_id'), array_column($rowset, 'topic_last_post_id'));
-                $is_anonymous_list = $this->helper->is_anonymous($post_list, 't');
+                $is_anonymous_list = $this->helper->is_anonymous($post_list);
 
                 foreach($rowset as $index => $value)
                 {
@@ -329,7 +297,7 @@ class listener implements EventSubscriberInterface
                         $rowset = $event['rowset'];
 
                         $post_list = array_merge(array_column($rowset, 'topic_first_post_id'), array_column($rowset, 'topic_last_post_id'));
-                        $is_anonymous_list = $this->helper->is_anonymous($post_list, 't');
+                        $is_anonymous_list = $this->helper->is_anonymous($post_list);
 
                         foreach($rowset as $index => $value)
                         {
@@ -465,18 +433,45 @@ class listener implements EventSubscriberInterface
             $event['notification_data'] = $notification_data;
         }
 
+        // fix notifying users who posted anonymously if people have quoted them
         public function notification_manager_add_notifications($event)
         {
-            $data = $event['data'];
+                $data = $event['data'];
 
-            if($data['is_anonymous'] == 1)
-            {
-                    $data['notify'] = true;
-                    $data['notify_set'] = $data['topic_id'];
-                    $data['poster_id'] = $data['post_edit_user'] = 2;
-                    $data['post_username'] = 'test';
-            }
+                // adapted from phpbb/textformatter/s9e/utils.php get_outermost_quote_authors function
+                if($event['notification_type_name'] == 'notification.type.quote')
+                {
+                        $xml = $data['message'];
 
-            $event['data'] = $data;
+                        if(!(strpos($xml, '<QUOTE ') === false))
+                        {
+                                $quote_data = array();
+                                $dom = new \DOMDocument;
+                                $dom->loadXML($xml);
+                                $xpath = new \DOMXPath($dom);
+
+                                // stores all outermost quote attributes in an array[x][y], where x is the outermost quote index
+                                $count = 0;
+                                foreach($xpath->query('//QUOTE[not(ancestor::QUOTE)]/@*') as $element)
+                                {
+                                        $count += ($element->nodeName == 'author') ? ($count == 0 ? 0.6 : 1) : 0;
+                                        $quote_data[floor($count)][$element->nodeName] = $element->nodeValue;
+                                }
+
+                                // get second xpath query to preserve index order to match is_anonymous_list
+                                // if their sizes dont match, for some reason a quote doesn't have an author... would there even be a notification?
+                                $quote_authors = $xpath->query('//QUOTE[not(ancestor::QUOTE)]/@author');
+                                $is_anonymous_list = $this->helper->is_anonymous(array_column($quote_data, 'post_id'), 'n');
+
+                                foreach($quote_data as $index => $index)
+                                        if(boolval($is_anonymous_list[$index][0]))
+                                                $quote_authors->item($index)->nodeValue = $is_anonymous_list[$index][1];
+
+                                // save the usernames back into the post_text we just got
+                                $data['post_text'] = $dom->saveXML();
+                        }
+                }
+
+                $event['notify_users'] = $this->notification_manager->get_item_type_class($event['notification_type_name'])->find_users_for_notification($data, $event['options']);
         }
 }

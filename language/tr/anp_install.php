@@ -20,7 +20,7 @@ $lang = array_merge($lang, [
 // TRANSLATORS CAN IGNORE THIS.
 // Overwrite core error message keys with a more specific message.
 $lang = array_merge($lang, [
-	'EXTENSION_NOT_ENABLEABLE'		=> isset($lang['EXTENSION_NOT_ENABLEABLE']) ?
+	'EXTENSION_NOT_ENABLEABLE'	=> isset($lang['EXTENSION_NOT_ENABLEABLE']) ?
 		$lang['EXTENSION_NOT_ENABLEABLE'] . '<br /><br />' . sprintf($lang['ANP_INSTALL_ERROR']) :
 		null,
 	'CLI_EXTENSION_ENABLE_FAILURE'	=> isset($lang['CLI_EXTENSION_ENABLE_FAILURE']) ?
