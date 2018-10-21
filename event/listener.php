@@ -82,7 +82,6 @@ class listener implements EventSubscriberInterface
                         'core.search_native_by_author_modify_search_key'    => 'search_native_by_author_modify_search_key',
                         'core.search_postgres_by_author_modify_search_key'  => 'search_postgres_by_author_modify_search_key',
                         'core.search_modify_rowset'                         => 'search_modify_rowset',
-                        'core.search_modify_post_row'                       => 'search_modify_post_row',
                         'core.search_modify_tpl_ary'                        => 'search_modify_tpl_ary',
 			'core.modify_submit_post_data'                      => 'modify_submit_post_data',
                         'core.submit_post_modify_sql_data'                  => 'submit_post_modify_sql_data',
@@ -122,6 +121,7 @@ class listener implements EventSubscriberInterface
         }
 
         // fixes the posting page from treating edits to anonymous posts like guest edits
+        // which ive fixed multiple other places so idk how affective this is tbh
         public function posting_modify_template_vars($event)
         {
                 $page_data = $event['page_data'];
@@ -174,7 +174,7 @@ class listener implements EventSubscriberInterface
                 $event['topic_data'] = $topic_data;
         }
 
-        // get is_anonymous in postrow sql query
+        // add data to each postrow, take care of friend/foe stuff
         public function viewtopic_post_rowset_data($event)
         {
                 $rowset = $event['rowset_data'];
@@ -199,18 +199,14 @@ class listener implements EventSubscriberInterface
         public function viewtopic_modify_post_row($event)
         {
                 $post_row = $event['post_row'];
+                $topic_data = $event['topic_data'];
                 $is_anonymous = $event['row']['is_anonymous'];
+                $is_staff = $topic_data['is_staff'];
 
                 // delete info from the deleted post hidden div so sneaky members cant find out who it was
                 // i did this the opposite way first, then reversed it into this shorter list... nothing should be missing
-                if(!$event['topic_data']['is_staff'] && $is_anonymous)
+                if(!$is_staff && $is_anonymous)
                 {
-                        $topic_data = $event['topic_data'];
-                        $post_id = $event['row']['post_id'];
-                        $topic_id = $topic_data['topic_id'];
-                        $forum_id = $event['row']['forum_id'];
-                        $is_staff = $topic_data['is_staff'];
-                        $is_anonymous = $event['row']['is_anonymous'];
                         $anonymous_name = $topic_data['anonymous_name'] . ' ' . $event['row']['anonymous_index'];
 
                         $post_row['POST_AUTHOR_FULL'] = $post_row['POST_AUTHOR'] =
@@ -338,8 +334,9 @@ class listener implements EventSubscriberInterface
                 $post_row = $event['post_row'];
 
                 $is_staff = $event['row']['is_staff'];
+                $is_anonymous = (bool)$event['row']['is_anonymous'];
 
-                if(!$is_staff && $event['row']['is_anonymous'])
+                if(!$is_staff && $is_anonymous)
                 {
                         $post_row['POST_AUTHOR_FULL'] = $post_row['POST_AUTHOR'] = $post_row['POSTER_QUOTE'] = $event['row']['anonymous_name'];
                         $post_row['POST_AUTHOR_COLOUR'] = $post_row['U_POST_AUTHOR'] =
@@ -347,32 +344,36 @@ class listener implements EventSubscriberInterface
                 }
 
                 $post_row['IS_STAFF'] = $is_staff;
-                $post_row['IS_ANONYMOUS'] = $event['row']['is_anonymous'];
+                $post_row['IS_ANONYMOUS'] = $is_anonymous;
 
                 $event['post_row'] = $post_row;
         }
 
+        // untested
         public function search_mysql_by_author_modify_search_key($event)
         {
-
-        }
-
-        // when searching by author, don't show anonymous posts to people who arent the OP of it or staff.  clear cache to see results if updating
-        public function search_native_by_author_modify_search_key($event)
-        {
-                $search_key_array = $event['search_key_array'];
-                $post_visibility = $event['post_visibility'];
-
-                $results = array();
-                $results = $this->helper->remove_anonymous_from_author_posts($search_key_array, $post_visibility);
+                $results = $this->helper->remove_anonymous_from_author_posts($event['search_key_array'], $event['post_visibility']);
 
                 $event['search_key_array'] = $results['search_key_array'];
                 $event['post_visibility'] = $results['post_visibility'];
         }
 
+        // when searching by author, don't show anonymous posts to people who arent the OP of it or staff.  clear cache to see results if updating
+        public function search_native_by_author_modify_search_key($event)
+        {
+                $results = $this->helper->remove_anonymous_from_author_posts($event['search_key_array'], $event['post_visibility']);
+
+                $event['search_key_array'] = $results['search_key_array'];
+                $event['post_visibility'] = $results['post_visibility'];
+        }
+
+        // untested
         public function search_postgres_by_author_modify_search_key($event)
         {
+                $results = $this->helper->remove_anonymous_from_author_posts($event['search_key_array'], $event['post_visibility']);
 
+                $event['search_key_array'] = $results['search_key_array'];
+                $event['post_visibility'] = $results['post_visibility'];
         }
 
         // add array of data for the topicrow in searches for if first/last post are anonymous
@@ -410,33 +411,11 @@ class listener implements EventSubscriberInterface
                         foreach($rowset as $index => $value)
                         {
                                 $rowset[$index]['is_staff'] = $is_staff;
-                                $rowset[$index]['anonymous_name'] = $anonymous . ' ' . $rowset[$index]['anonymous_anonymous_index'];
+                                $rowset[$index]['anonymous_name'] = $anonymous . ' ' . $rowset[$index]['anonymous_index'];
                         }
                 }
 
                 $event['rowset'] = $rowset;
-        }
-
-        // edit data to change postrow username
-        // well.... doesn't seem to do anything, so i'm removing this for now
-        public function search_modify_post_row($event)
-        {
-                /*$row = $event['row'];
-                $is_staff = $this->helper->is_staff();
-
-                if(!$is_staff && $event['row']['is_anonymous'])
-                {
-                        $row['username'] = $row['username_clean'] = $this->language->lang('ANP_DEFAULT');
-                        // 0 turns the post into a guest which achieves no url link, but haven't gotten around guest renaming, so negative works for now
-                        $row['poster_id'] = ANONYMOUS;
-                        $row['user_colour'] = $row['user_id'] = $row['user_sig'] =
-                        $row['enable_sig'] = NULL;
-                }
-
-                $row['IS_STAFF'] = $is_staff;
-                $row['IS_ANONYMOUS'] = $event['row']['is_anonymous'];
-
-                $event['row'] = $row;*/
         }
 
         // modify each search topicrow as done in the forumrow, modify username link in postrow
@@ -483,8 +462,8 @@ class listener implements EventSubscriberInterface
 
                 $data = array_merge($data, array(
 			'is_anonymous' => isset($anonpost) ? $anonpost : 0,
-                        'anonymous_index' => isset($anonpost) ? $this->helper->get_poster_index($data['topic_id'], $this->helper->this_user_id()) : 0,
                         'fixed_poster_id' => $this->helper->get_poster_id($data['post_id']),
+                        'anonymous_index' => isset($anonpost) ? $this->helper->get_poster_index($data['topic_id'], $this->helper->this_user_id()) : 0,
 		));
 
                 $event['data'] = $data;
@@ -496,9 +475,16 @@ class listener implements EventSubscriberInterface
                 $sql_data = $event['sql_data'];
                 $data = $event['data'];
                 $poster_id = $sql_data[POSTS_TABLE]['sql']['poster_id'];
+                $poster_id = (($poster_id == 0) || ($poster_id == 1)) ? (bool)$poster_id : NULL;
+
+                $sql_data[POSTS_TABLE]['sql'] = array_merge($sql_data[POSTS_TABLE]['sql'], array(
+                        'is_anonymous'  => isset($data['is_anonymous']) ? $data['is_anonymous'] : 0,
+                        'anonymous_index'  => isset($data['anonymous_index']) ? $data['anonymous_index'] : 0,
+                ));
 
                 // fix poster id getting deleted from sql data
-                if(($data['is_anonymous'] && ($poster_id == 0)) || (!$data['is_anonymous'] && ($poster_id == 1)))
+                // xor would work here, but $poster_id isnt always equal to 0 or 1...
+                if(!is_null($poster_id) && ($data['is_anonymous'] || $poster_id))
                 {
                         switch($event['post_mode'])
                         {
@@ -510,11 +496,6 @@ class listener implements EventSubscriberInterface
                                 break;
                         }
                 }
-
-                $sql_data[POSTS_TABLE]['sql'] = array_merge($sql_data[POSTS_TABLE]['sql'], array(
-                        'is_anonymous'  => isset($data['is_anonymous']) ? $data['is_anonymous'] : 0,
-                        'anonymous_index'  => isset($data['is_anonymous']) ? $data['anonymous_index'] : 0,
-                ));
 
                 $event['sql_data'] = $sql_data;
                 $event['data'] = $data;
@@ -531,7 +512,7 @@ class listener implements EventSubscriberInterface
             if($data_ary['is_anonymous'] && ($mode == 'post' || $mode == 'reply' || $mode == 'quote'))
             {
                     $notification_data['poster_id'] = ANONYMOUS;
-                    $notification_data['post_username'] = "Anonymous " . $data_ary['anonymous_index'];
+                    $notification_data['post_username'] = $this->language->lang('ANP_DEFAULT') . ' ' . $data_ary['anonymous_index'];
             }
 
             $event['notification_data'] = $notification_data;
