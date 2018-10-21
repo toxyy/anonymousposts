@@ -1,4 +1,4 @@
-# PhpBB Extension - toxyy Anonymous Posts v0.7.0
+# PhpBB Extension - toxyy Anonymous Posts v0.7.5
 
 [Topic on phpBB.com](https://www.phpbb.com/community/viewtopic.php?f=456&t=2488071)
 
@@ -26,6 +26,10 @@ and users to be able to post anonymously, in whatever forums you've permitted to
 anonymous posts.
 
 Turkish language supported, all styles should be supported.
+
+Support for Normal and Special Ranks extension by kasimi/posey (https://www.phpbb.com/customise/db/extension/normal_and_special_ranks/)
+
+Support for Recent Topics extension by PayBas/Sajaki (https://www.phpbb.com/customise/db/extension/recent_topics_2/)
 
 ## Screenshot
 
