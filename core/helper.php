@@ -42,28 +42,47 @@ class helper
         // get unique poster index for consistent distinct anonymous posters
         public function get_poster_index($topic_id, $poster_id)
         {
-                // get a list of unique posters in the topic in time order
-                $poster_list_query = 'SELECT DISTINCT poster_id FROM ' . POSTS_TABLE . '
-                                      WHERE topic_id = ' . $topic_id . '
-                                      AND is_anonymous = 1
-                                      ORDER BY post_time ASC';
+                // have we already anonymously posted in this topic?
+                $anon_index_query = 'SELECT anonymous_index
+                                        FROM ' . POSTS_TABLE . '
+                                        WHERE topic_id = ' . $topic_id . '
+                                        AND poster_id = ' . $poster_id . '
+                                        AND is_anonymous = 1
+                                        ORDER BY post_time ASC LIMIT 1';
 
-                $result = $poster_list = array();
-                $result = $this->db->sql_query($poster_list_query);
+                $result = array();
+                $result = $this->db->sql_query($anon_index_query);
 
                 // get index of this post in that list
                 $poster_index = 0;
-                $count = 1;
+
                 while($row = $this->db->sql_fetchrow($result))
                 {
-                        if($row['poster_id'] == $poster_id)
-                                $poster_index = $count;
-
-                        $count++;
+                        $poster_index = ($row['anonymous_index'] > 0) ? $row['anonymous_index'] : $poster_index;
                 }
 
                 $this->db->sql_freeresult($result);
                 unset($result);
+
+                // this only runs if we've never posted in this topic...
+                if($poster_index == 0)
+                {
+                        $anon_index_query = 'SELECT COUNT(DISTINCT(poster_id)) as anon_index
+                                                FROM ' . POSTS_TABLE . '
+                                                WHERE topic_id = ' . $topic_id . '
+                                                AND is_anonymous = 1';
+
+                        $result2 = array();
+                        $result2 = $this->db->sql_query($anon_index_query);
+
+                        while($row = $this->db->sql_fetchrow($result2))
+                        {
+                                $poster_index = $row['anon_index'] + 1;
+                        }
+
+                        $this->db->sql_freeresult($result2);
+                        unset($result2);
+                }
 
                 return $poster_index;
         }
@@ -82,6 +101,16 @@ class helper
                 return $is_staff;
         }
 
+        public function is_registered()
+        {
+                return $this->user->data['is_registered'];
+        }
+
+        public function this_user_id()
+        {
+                return $this->user->data['user_id'];
+        }
+
         /**
         * get data from topicrow to use in the event to change it
         * supports three modes: t (default), f, and n (topic, forum, and notification)
@@ -96,7 +125,7 @@ class helper
                             // default case (t)
                             : 'topic_id');
 
-                $is_anonymous_query = 'SELECT is_anonymous, post_id, ' . $array_key . '
+                $is_anonymous_query = 'SELECT anonymous_index, is_anonymous, post_id, ' . $array_key . '
                                         FROM ' . POSTS_TABLE . '
                                         WHERE post_id IN (' . implode(",", $post_list) . ')
                                         ORDER BY post_id ASC';
@@ -128,8 +157,13 @@ class helper
 
                                 $is_anonymous_list[$index][1] = $username;
                         }
+                        else
+                        {
+                                if($mode == 'f') $is_anonymous_list[$row[$array_key]][1] = $row['topic_id'];
 
-                        if($mode == 'f') $is_anonymous_list[$row[$array_key]][1] = $row['topic_id'];
+                                // always gets set to the last index of the row
+                                $is_anonymous_list[$row[$array_key]]['last_index'] = $row['anonymous_index'];
+                        }
 
                         $index++;
                 }
@@ -142,9 +176,9 @@ class helper
 
         public function get_poster_id($post_id)
         {
-                // get a list of unique posters in the topic in time order
+                // poster id from post_id
                 $poster_id_query = 'SELECT poster_id FROM ' . POSTS_TABLE . '
-                                      WHERE post_id = ' . $post_id;
+                                    WHERE post_id = ' . $post_id;
 
                 $result = array();
                 $result = $this->db->sql_query($poster_id_query);
@@ -160,5 +194,27 @@ class helper
                 unset($result);
 
                 return $poster_id;
+        }
+
+        // removes anonymous posts from "by author" search queries... unless the searcher is staff or the searchee himself
+        public function remove_anonymous_from_author_posts($search_key_array, $post_visibility)
+        {
+                $is_staff = $this->is_staff();
+
+                $no_anonymous_posts = $is_staff ?: ' AND IF(p.poster_id <> ' . $this->user->data['user_id'] . ', p.is_anonymous <> 1, p.poster_id = p.poster_id)';
+                // i haven't found search_key_array to actually help, but I'm going to keep it here anyways
+                if(!$is_staff)
+                {
+                        /*foreach($search_key_array as $index => $value)
+                        {
+                                if($value === $post_visibility)
+                                        $search_key_array[$index] .= $no_anonymous_posts;
+                        }*/
+
+                        // the magic is right here
+                        $post_visibility .= $no_anonymous_posts;
+                }
+
+                return array('search_key_array' => $search_key_array, 'post_visibility' => $post_visibility);
         }
 }

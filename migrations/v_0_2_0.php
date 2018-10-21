@@ -11,11 +11,6 @@ namespace toxyy\anonymousposts\migrations;
 
 class v_0_2_0 extends \phpbb\db\migration\migration
 {
-	public function effectively_installed()
-	{
-		return isset($this->config['anonymous_posts']);
-	}
-
 	static public function depends_on()
 	{
 		return array('\toxyy\anonymousposts\migrations\release_0_1_0_data');
