@@ -199,10 +199,11 @@ class listener implements EventSubscriberInterface
         public function viewtopic_modify_post_row($event)
         {
                 $post_row = $event['post_row'];
+                $is_anonymous = $event['row']['is_anonymous'];
 
                 // delete info from the deleted post hidden div so sneaky members cant find out who it was
                 // i did this the opposite way first, then reversed it into this shorter list... nothing should be missing
-                if(!$is_staff && $is_anonymous)
+                if(!$event['topic_data']['is_staff'] && $is_anonymous)
                 {
                         $topic_data = $event['topic_data'];
                         $post_id = $event['row']['post_id'];
@@ -250,7 +251,7 @@ class listener implements EventSubscriberInterface
                         if($is_anonymous_list[$index][1] == NULL) $is_anonymous_list[$index][1] = $is_anonymous_list[$index][0];
 
                         $rowset[$index]['topic_first_is_anonymous'] = $is_anonymous_list[$index][0];
-                        $rowset[$index]['topic_last_is_anonymous'] = $is_anonymous_list[$index][1];
+                        $rowset[$index]['topic_last_is_anonymous'] = (($is_anonymous_list[$index][1] == NULL) ? 0 : $is_anonymous_list[$index][1]);
                         $rowset[$index]['topic_first_anonymous_name'] = $anonymous . ' ' . 1;
                         $rowset[$index]['topic_last_anonymous_name'] = $anonymous . ' ' . $is_anonymous_list[$index]['last_index'];
                         $rowset[$index]['is_staff'] = $is_staff;
@@ -275,7 +276,7 @@ class listener implements EventSubscriberInterface
 
                         if($row['topic_last_is_anonymous'])
                         {
-                                $topic_row['LAST_POST_AUTHOR'] = $row['topic_last_anonymous_name'];
+                                $topic_row['LAST_POST_AUTHOR'] = $topic_row['LAST_POST_AUTHOR_FULL'] = $row['topic_last_anonymous_name'];
                                 $topic_row['LAST_POST_AUTHOR_COLOUR'] = NULL;
                         }
                 }
@@ -425,7 +426,7 @@ class listener implements EventSubscriberInterface
 
                 if(!$is_staff && $event['row']['is_anonymous'])
                 {
-                        $row['username'] = $row['username_clean'] = $this->language->lang('ANP_DEFAULT') . ' 2' . $event['row']['anonymous_index'];
+                        $row['username'] = $row['username_clean'] = $this->language->lang('ANP_DEFAULT');
                         // 0 turns the post into a guest which achieves no url link, but haven't gotten around guest renaming, so negative works for now
                         $row['poster_id'] = ANONYMOUS;
                         $row['user_colour'] = $row['user_id'] = $row['user_sig'] =
