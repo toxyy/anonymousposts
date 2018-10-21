@@ -5,7 +5,9 @@
 ## Requirements
 
 phpBB 3.2.4-RC1+ PHP 7+
+
 ticket 15819 (merged) - https://github.com/phpbb/phpbb/pull/5388
+
 ticket 15841 - https://github.com/phpbb/phpbb/pull/5417
 
 ## Features
