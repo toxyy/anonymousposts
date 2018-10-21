@@ -495,9 +495,10 @@ class listener implements EventSubscriberInterface
         {
                 $sql_data = $event['sql_data'];
                 $data = $event['data'];
+                $poster_id = $sql_data[POSTS_TABLE]['sql']['poster_id'];
 
                 // fix poster id getting deleted from sql data
-                if($data['is_anonymous'] || ($sql_data[POSTS_TABLE]['sql']['poster_id'] == 0))
+                if(($data['is_anonymous'] && ($poster_id == 0)) || (!$data['is_anonymous'] && ($poster_id == 1)))
                 {
                         switch($event['post_mode'])
                         {
