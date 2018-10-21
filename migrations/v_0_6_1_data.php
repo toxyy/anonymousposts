@@ -9,7 +9,7 @@
 
 namespace toxyy\anonymousposts\migrations;
 
-class v_0_6_2_data extends \phpbb\db\migration\migration
+class v_0_6_1_data extends \phpbb\db\migration\migration
 {
 	static public function depends_on()
 	{
@@ -34,7 +34,11 @@ class v_0_6_2_data extends \phpbb\db\migration\migration
 	public function update_anonymous_index()
 	{
                 $sql = 'UPDATE ' . POSTS_TABLE . ' p
-                        INNER JOIN( SELECT DISTINCT(p.poster_id), IF(@super = p.topic_id, @count := @count, @count := 0) as backend, IF(@lastposter != p.poster_id, @count := @count + 1, @count := @count) AS anon_index, (@super := p.topic_id) AS tid, (p.post_id) AS pid, (@lastposter := p.poster_id) AS last_poster, p.post_time
+                        INNER JOIN( SELECT IF(@super = p.topic_id,
+                                            @count := @count, @count := 0) as backend,
+                                            IF(@lastposter != p.poster_id, @count := @count + 1, @count := @count) AS anon_index,
+                                            (@super := p.topic_id) AS tid, (p.post_id) AS pid,
+                                            (@lastposter := p.poster_id) AS last_poster, p.post_time
                                     FROM phpbbkm_posts AS p
                                     JOIN (SELECT @super := 0) AS tmp
                                     JOIN (SELECT @count := 0) AS tmp2
