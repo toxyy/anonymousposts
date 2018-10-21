@@ -513,7 +513,7 @@ class listener implements EventSubscriberInterface
 
                 $sql_data[POSTS_TABLE]['sql'] = array_merge($sql_data[POSTS_TABLE]['sql'], array(
                         'is_anonymous'  => isset($data['is_anonymous']) ? $data['is_anonymous'] : 0,
-                        'anonymous_index'  => isset($data['anonymous_index']) ? $data['anonymous_index'] : 0,
+                        'anonymous_index'  => isset($data['is_anonymous']) ? $data['anonymous_index'] : 0,
                 ));
 
                 $event['sql_data'] = $sql_data;
