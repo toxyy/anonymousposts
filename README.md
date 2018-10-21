@@ -1,12 +1,14 @@
-# PhpBB Extension - toxyy Anonymous Posts v0.4.0
+# PhpBB Extension - toxyy Anonymous Posts v0.7.0
 
 [Topic on phpBB.com](https://www.phpbb.com/community/viewtopic.php?f=456&t=2488071)
 
 ## Requirements
 
-phpBB 3.2.4-RC1+ PHP 7+ (ticket 15819)
+phpBB 3.2.4-RC1+ PHP 7+
 
-martti's Group Template Variables (https://www.phpbb.com/community/viewtopic.php?f=456&t=2325391)
+ticket 15819 (merged) - https://github.com/phpbb/phpbb/pull/5388
+
+ticket 15841 - https://github.com/phpbb/phpbb/pull/5417
 
 ## Features
 
@@ -15,13 +17,15 @@ Post anonymously in topics as a user.  All user information is hidden from users
 All places the former username would appear are replaced, including the topic review, forumrow, topicrow, and
 postrow, even in search.php pages.  Quotes are supported as well.
 
-Users will receive notifications to their anonymous posts. (IN DEV)
+Users will receive notifications to their anonymous posts.
+
+Friends and foes have no impact on anonymous posts.
 
 Forum and user (including group) permissions are available in the ACP.  Permit individual groups
 and users to be able to post anonymously, in whatever forums you've permitted to allow
 anonymous posts.
 
-Turkish language supported, multiple styles soon to be supported.
+Turkish language supported, all styles should be supported.
 
 ## Screenshot
 
