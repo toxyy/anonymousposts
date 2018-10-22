@@ -40,14 +40,14 @@ class helper
 	}
 
         // get unique poster index for consistent distinct anonymous posters
-        public function get_poster_index($topic_id, $poster_id)
+        public function get_poster_index($topic_id)
         {
                 // have we already anonymously posted in this topic?
                 // 0.7.0 - redundancy added (AND anonymous_index > 0)
                 $anon_index_query = 'SELECT anonymous_index
                                         FROM ' . POSTS_TABLE . '
                                         WHERE topic_id = ' . $topic_id . '
-                                        AND poster_id = ' . $poster_id . '
+                                        AND poster_id = ' . $this->user->data['user_id'] . '
                                         AND is_anonymous = 1
                                         AND anonymous_index > 0
                                         ORDER BY post_time ASC LIMIT 1';
@@ -64,9 +64,9 @@ class helper
                 }
 
                 $this->db->sql_freeresult($result);
-                unset($result);
+                $result = NULL;
 
-                // this only runs if we've never posted in this topic...
+                // this only runs if we've never posted in this topic, having data from previous query...
                 if($poster_index == 0)
                 {
                         $anon_index_query = 'SELECT COUNT(DISTINCT(poster_id)) as anon_index
@@ -83,7 +83,7 @@ class helper
                         }
 
                         $this->db->sql_freeresult($result2);
-                        unset($result2);
+                        $result2 = NULL;
                 }
 
                 return $poster_index;
@@ -94,11 +94,13 @@ class helper
         public function is_staff()
         {
                 $admins = $this->auth->acl_get_list(false, 'a_', false);
-                $mods = $this->auth->acl_get_list(false, 'm_', false);
 
                 $is_staff = in_array($this->user->data['user_id'], $admins[0]['a_']);
                 if(!$is_staff)
+                {
+                        $mods = $this->auth->acl_get_list(false, 'm_', false);
                         $is_staff = in_array($this->user->data['user_id'], $mods[0]['m_']);
+                }
 
                 return $is_staff;
         }
@@ -106,11 +108,6 @@ class helper
         public function is_registered()
         {
                 return $this->user->data['is_registered'];
-        }
-
-        public function this_user_id()
-        {
-                return $this->user->data['user_id'];
         }
 
         /**
@@ -155,7 +152,7 @@ class helper
                                 while($row = $this->db->sql_fetchrow($result2)) $username = $row['username'];
 
                                 $this->db->sql_freeresult($result2);
-                                unset($result2);
+                                $result2 = NULL;
 
                                 $is_anonymous_list[$index][1] = $username;
                         }
@@ -171,7 +168,7 @@ class helper
                 }
 
                 $this->db->sql_freeresult($result);
-                unset($result);
+                $result = NULL;
 
                 return $is_anonymous_list;
         }
@@ -193,29 +190,19 @@ class helper
                 }
 
                 $this->db->sql_freeresult($result);
-                unset($result);
+                $result = NULL;
 
                 return $poster_id;
         }
 
         // removes anonymous posts from "by author" search queries... unless the searcher is staff or the searchee himself
-        public function remove_anonymous_from_author_posts($search_key_array, $post_visibility)
+        public function remove_anonymous_from_author_posts($search_key_array, $post_visibility, $is_staff)
         {
-                $is_staff = $this->is_staff();
-
                 $no_anonymous_posts = $is_staff ?: ' AND IF(p.poster_id <> ' . $this->user->data['user_id'] . ', p.is_anonymous <> 1, p.poster_id = p.poster_id)';
-                // i haven't found search_key_array to actually help, but I'm going to keep it here anyways
-                if(!$is_staff)
-                {
-                        /*foreach($search_key_array as $index => $value)
-                        {
-                                if($value === $post_visibility)
-                                        $search_key_array[$index] .= $no_anonymous_posts;
-                        }*/
 
-                        // the magic is right here
-                        $post_visibility .= $no_anonymous_posts;
-                }
+                // i haven't found search_key_array to actually help at all
+                // 0.8.0. - removed that bit
+                if(!$is_staff) $post_visibility .= $no_anonymous_posts;
 
                 return array('search_key_array' => $search_key_array, 'post_visibility' => $post_visibility);
         }
