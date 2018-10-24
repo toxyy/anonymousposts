@@ -55,16 +55,12 @@ class helper
                 $result = array();
                 $result = $this->db->sql_query($anon_index_query);
 
-                // get index of this post in that list
-                $poster_index = 0;
-
-                while($row = $this->db->sql_fetchrow($result))
-                {
-                        $poster_index = ($row['anonymous_index'] > 0) ? $row['anonymous_index'] : $poster_index;
-                }
+                // these two get index of this post in that list
+                $anonymous_index = (int) $this->db->sql_fetchfield('anonymous_index');
+                $poster_index = !($anonymous_index >= 0) ?: $anonymous_index;
 
                 $this->db->sql_freeresult($result);
-                $result = NULL;
+                unset($result);
 
                 // this only runs if we've never posted in this topic, having data from previous query...
                 if($poster_index == 0)
@@ -74,35 +70,32 @@ class helper
                                                 WHERE topic_id = ' . $topic_id . '
                                                 AND is_anonymous = 1';
 
-                        $result2 = array();
-                        $result2 = $this->db->sql_query($anon_index_query);
+                        $result = array();
+                        $result = $this->db->sql_query($anon_index_query);
 
-                        while($row = $this->db->sql_fetchrow($result2))
-                        {
-                                $poster_index = $row['anon_index'] + 1;
-                        }
+                        $poster_index = ((int) $this->db->sql_fetchfield('anon_index')) + 1;
 
-                        $this->db->sql_freeresult($result2);
-                        $result2 = NULL;
+                        $this->db->sql_freeresult($result);
+                        unset($result);
                 }
 
                 return $poster_index;
         }
 
-        // checks if the current user is an admin or mod
-        // thanks juhas https://www.phpbb.com/community/viewtopic.php?f=71&t=2151259#p13117355
+        /**
+        * checks if the current user is an admin or mod
+        * thanks juhas https://www.phpbb.com/community/viewtopic.php?f=71&t=2151259#p13117355
+        * v0.8.0 - check for mods first, since there's more of them. is the admin not in the mod list?
+        * also made it a bit smaller
+        */
         public function is_staff()
         {
+                $mods = $this->auth->acl_get_list(false, 'm_', false);
+                if(in_array($this->user->data['user_id'], $mods[0]['m_']))
+                        return true;
+
                 $admins = $this->auth->acl_get_list(false, 'a_', false);
-
-                $is_staff = in_array($this->user->data['user_id'], $admins[0]['a_']);
-                if(!$is_staff)
-                {
-                        $mods = $this->auth->acl_get_list(false, 'm_', false);
-                        $is_staff = in_array($this->user->data['user_id'], $mods[0]['m_']);
-                }
-
-                return $is_staff;
+                return in_array($this->user->data['user_id'], $admins[0]['a_']);
         }
 
         public function is_registered()
@@ -124,7 +117,7 @@ class helper
                             // default case (t)
                             : 'topic_id');
 
-                $is_anonymous_query = 'SELECT anonymous_index, is_anonymous, post_id, ' . $array_key . '
+                $is_anonymous_query = 'SELECT anonymous_index, is_anonymous, ' . $array_key . '
                                         FROM ' . POSTS_TABLE . '
                                         WHERE post_id IN (' . implode(",", $post_list) . ')
                                         ORDER BY post_id ASC';
@@ -147,14 +140,10 @@ class helper
                                 $result2 = array();
                                 $result2 = $this->db->sql_query($username_query);
 
-                                $username = '';
-
-                                while($row = $this->db->sql_fetchrow($result2)) $username = $row['username'];
+                                $is_anonymous_list[$index][1] = (int) $this->db->sql_fetchfield($result2, 'username');
 
                                 $this->db->sql_freeresult($result2);
-                                $result2 = NULL;
-
-                                $is_anonymous_list[$index][1] = $username;
+                                unset($result2);
                         }
                         else
                         {
@@ -168,7 +157,7 @@ class helper
                 }
 
                 $this->db->sql_freeresult($result);
-                $result = NULL;
+                unset($result);
 
                 return $is_anonymous_list;
         }
@@ -184,13 +173,10 @@ class helper
 
                 $poster_id = 0;
 
-                while($row = $this->db->sql_fetchrow($result))
-                {
-                        $poster_id = $row['poster_id'];
-                }
+                $poster_id = (int) $this->db->sql_fetchfield('poster_id');
 
                 $this->db->sql_freeresult($result);
-                $result = NULL;
+                unset($result);
 
                 return $poster_id;
         }

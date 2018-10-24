@@ -157,10 +157,13 @@ class listener implements EventSubscriberInterface
 
                 if($event['row']['is_anonymous'])
                 {
-                        if($event['row']['foe'])
+                        if($event['row']['foe'] == '1')
+                        {
+                                $rowset['foe'] = '0';
                                 $rowset['hide_post'] = false;
+                        }
 
-                        $rowset['friend'] = $rowset['foe'] = NULL;
+                        $event['row']['friend'] = ($event['row']['friend'] != '1') ?: '0';
                 }
 
                 $event['rowset_data'] = $rowset;
@@ -357,11 +360,13 @@ class listener implements EventSubscriberInterface
                 // get checkbox value
                 $anonpost = $this->request->variable('anonpost', 0, true);
 
-                $data = array_merge($data, array(
-			'is_anonymous' => isset($anonpost) ? $anonpost : 0,
-                        'fixed_poster_id' => $this->helper->get_poster_id($data['post_id']),
-                        'anonymous_index' => isset($anonpost) ? $this->helper->get_poster_index($data['topic_id']) : 0,
-		));
+                $data['fixed_poster_id'] = $this->helper->get_poster_id($data['post_id']);
+
+                if(isset($anonpost))
+                {
+                        $data['is_anonymous'] = $anonpost;
+                        $data['anonymous_index'] = $this->helper->get_poster_index($data['topic_id']);
+                }
 
                 $event['data'] = $data;
         }
@@ -370,18 +375,16 @@ class listener implements EventSubscriberInterface
         public function submit_post_modify_sql_data($event)
         {
                 $sql_data = $event['sql_data'];
-                $data = $event['data'];
-                $poster_id = $sql_data[POSTS_TABLE]['sql']['poster_id'];
-                $poster_id = (($poster_id == 0) || ($poster_id == 1)) ? (bool)$poster_id : NULL;
 
-                $sql_data[POSTS_TABLE]['sql'] = array_merge($sql_data[POSTS_TABLE]['sql'], array(
-                        'is_anonymous'  => isset($data['is_anonymous']) ? $data['is_anonymous'] : 0,
-                        'anonymous_index'  => isset($data['anonymous_index']) ? $data['anonymous_index'] : 0,
-                ));
+                if(isset($event['data']['is_anonymous']))
+                {
+                        $sql_data[POSTS_TABLE]['sql']['is_anonymous'] = $event['data']['is_anonymous'];
+                        $sql_data[POSTS_TABLE]['sql']['anonymous_index'] = $event['data']['anonymous_index'];
+                }
 
                 // fix poster id getting deleted from sql data
                 // xor would work here, but $poster_id isnt always equal to 0 or 1...
-                if(!is_null($poster_id) && ($data['is_anonymous'] || $poster_id))
+                if($event['data']['is_anonymous'] || ($sql_data[POSTS_TABLE]['sql']['poster_id'] === 1))
                 {
                         switch($event['post_mode'])
                         {
@@ -389,7 +392,7 @@ class listener implements EventSubscriberInterface
                                 case 'edit':
                                 case 'edit_last_post':
                                 case 'edit_topic':
-                                        $sql_data[POSTS_TABLE]['sql']['poster_id'] = $data['fixed_poster_id'];
+                                        $sql_data[POSTS_TABLE]['sql']['poster_id'] = $event['data']['fixed_poster_id'];
                                 break;
                         }
                 }
@@ -401,17 +404,21 @@ class listener implements EventSubscriberInterface
         // uses custom event made in functions_posting.php lines 2285 - 2296 ticket/15819
         public function modify_submit_notification_data($event)
         {
-                $data_ary = $event['data_ary'];
-                $mode = $event['mode'];
-
-                if($data_ary['is_anonymous'] && ($mode == 'post' || $mode == 'reply' || $mode == 'quote'))
+                if($event['data_ary']['is_anonymous'])
                 {
-                        $notification_data = $event['notification_data'];
+                        switch($event['mode'])
+                        {
+                        case 'post':
+                        case 'reply':
+                        case 'quote':
+                                $notification_data = $event['notification_data'];
 
-                        $notification_data['poster_id'] = ANONYMOUS;
-                        $notification_data['post_username'] = $this->anonymous . ' ' . $data_ary['anonymous_index'];
+                                $notification_data['poster_id'] = ANONYMOUS;
+                                $notification_data['post_username'] = $this->anonymous . ' ' . $event['data_ary']['anonymous_index'];
 
-                        $event['notification_data'] = $notification_data;
+                                $event['notification_data'] = $notification_data;
+                                bresk;
+                        }
                 }
         }
 
@@ -486,14 +493,14 @@ class listener implements EventSubscriberInterface
                                 {
                                         $topic_id = $generic_rowset[$index]['topic_id'];
 
-                                        // fix last post null issue if topic has no replies
-                                        if($is_anonymous_list[$topic_id][1] == NULL) $is_anonymous_list[$topic_id][1] = $is_anonymous_list[$topic_id][0];
+                                        // fix last post null issue if topic has no replies (if last post isnt null, set equal to list[0]
+                                        $last_is_anonymous = $is_anonymous_list[$topic_id][1] ?? $is_anonymous_list[$topic_id][0];
 
                                         $generic_rowset[$index]['topic_first_is_anonymous'] = $is_anonymous_list[$topic_id][0];
                                         if($generic_rowset[$index]['topic_first_is_anonymous'])
                                                 $generic_rowset[$index]['topic_first_anonymous_name'] = $this->anonymous . ' ' . 1;
 
-                                        $generic_rowset[$index]['topic_last_is_anonymous'] = (($is_anonymous_list[$topic_id][1] == NULL) ? 0 : $is_anonymous_list[$topic_id][1]);
+                                        $generic_rowset[$index]['topic_last_is_anonymous'] = $last_is_anonymous;
                                         if($generic_rowset[$index]['topic_last_is_anonymous'])
                                                 $generic_rowset[$index]['topic_last_anonymous_name'] = $this->anonymous . ' ' . $is_anonymous_list[$topic_id]['last_index'];
                                 }
@@ -512,19 +519,16 @@ class listener implements EventSubscriberInterface
                         switch($mode)
                         {
                         case 'topics':
-                                if($row['topic_first_is_anonymous'] || $row['topic_last_is_anonymous'])
+                                if($row['topic_first_is_anonymous'])
                                 {
-                                        if($row['topic_first_is_anonymous'])
-                                        {
-                                                $generic_row['TOPIC_AUTHOR'] = $generic_row['TOPIC_AUTHOR_FULL'] = $row['topic_first_anonymous_name'];
-                                                $generic_row['TOPIC_AUTHOR_COLOUR'] = NULL;
-                                        }
+                                        $generic_row['TOPIC_AUTHOR'] = $generic_row['TOPIC_AUTHOR_FULL'] = $row['topic_first_anonymous_name'];
+                                        $generic_row['TOPIC_AUTHOR_COLOUR'] = NULL;
+                                }
 
-                                        if($row['topic_last_is_anonymous'])
-                                        {
-                                                $generic_row['LAST_POST_AUTHOR'] = $generic_row['LAST_POST_AUTHOR_FULL'] = $row['topic_last_anonymous_name'];
-                                                $generic_row['LAST_POST_AUTHOR_COLOUR'] = NULL;
-                                        }
+                                if($row['topic_last_is_anonymous'])
+                                {
+                                        $generic_row['LAST_POST_AUTHOR'] = $generic_row['LAST_POST_AUTHOR_FULL'] = $row['topic_last_anonymous_name'];
+                                        $generic_row['LAST_POST_AUTHOR_COLOUR'] = NULL;
                                 }
                                 break;
                         case 'posts_searchrow':
