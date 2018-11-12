@@ -39,7 +39,7 @@ class v_0_6_1_data extends \phpbb\db\migration\migration
                                             IF(@lastposter != p.poster_id, @count := @count + 1, @count := @count) AS anon_index,
                                             (@super := p.topic_id) AS tid, (p.post_id) AS pid,
                                             (@lastposter := p.poster_id) AS last_poster, p.post_time
-                                    FROM phpbbkm_posts AS p
+                                    FROM ' . POSTS_TABLE . ' AS p
                                     JOIN (SELECT @super := 0) AS tmp
                                     JOIN (SELECT @count := 0) AS tmp2
                                     JOIN (SELECT @lastposter := 0) AS tmp3

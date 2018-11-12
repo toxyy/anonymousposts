@@ -87,15 +87,19 @@ class helper
         * thanks juhas https://www.phpbb.com/community/viewtopic.php?f=71&t=2151259#p13117355
         * v0.8.0 - check for mods first, since there's more of them. is the admin not in the mod list?
         * also made it a bit smaller
+        * v0.9.5 noticed that this was giving the right result by coincidence, and this is better used anyways.
         */
         public function is_staff()
         {
-                $mods = $this->auth->acl_get_list(false, 'm_', false);
-                if(in_array($this->user->data['user_id'], $mods[0]['m_']))
+                $user_id = $this->user->data['user_id'];
+
+                if(!empty($this->auth->acl_get_list($user_id, 'm_')))
                         return true;
 
-                $admins = $this->auth->acl_get_list(false, 'a_', false);
-                return in_array($this->user->data['user_id'], $admins[0]['a_']);
+                if(!empty($this->auth->acl_get_list($user_id, 'a_')))
+                        return true;
+
+                return false;
         }
 
         public function is_registered()
@@ -110,48 +114,24 @@ class helper
         * forum mode returns last post checked and topic id in pairs [0] and [1]
         * notification mode returns post_id checked and username in pairs [0] and [1]
         */
-        public function is_anonymous($post_list, $mode = 't')
-        {       // this supports viewforum and viewtopic
-                $array_key = $mode == 'f' ? 'topic_id, forum_id'
-                            : ($mode == 'n' ? 'poster_id'
-                            // default case (t)
-                            : 'topic_id');
-
-                $is_anonymous_query = 'SELECT anonymous_index, is_anonymous, ' . $array_key . '
+        public function is_anonymous($post_list)
+        {
+                $is_anonymous_query = 'SELECT anonymous_index, is_anonymous, poster_id
                                         FROM ' . POSTS_TABLE . '
                                         WHERE post_id IN (' . implode(",", $post_list) . ')
                                         ORDER BY post_id ASC';
 
-                $result = $is_anonymous_list = array();
+                $result = $is_anonymous_list = $notification_list = array();
                 $result = $this->db->sql_query($is_anonymous_query);
 
-                $array_key = $mode == 'f' ? 'forum_id' : $array_key;
-
                 $index = 0;
+                $continue = false;
                 while($row = $this->db->sql_fetchrow($result))
                 {
-                        $is_anonymous_list[$mode == 'n' ? $index : $row[$array_key]][] = $row['is_anonymous'];
+                        if($$row['is_anonymous']) $continue = true;
 
-                        if($mode == 'n')
-                        {
-                                $username_query = 'SELECT username FROM ' . USERS_TABLE . '
-                                                    WHERE user_id = ' . $row['poster_id'];
-
-                                $result2 = array();
-                                $result2 = $this->db->sql_query($username_query);
-
-                                $is_anonymous_list[$index][1] = (int) $this->db->sql_fetchfield($result2, 'username');
-
-                                $this->db->sql_freeresult($result2);
-                                unset($result2);
-                        }
-                        else
-                        {
-                                if($mode == 'f') $is_anonymous_list[$row[$array_key]][1] = $row['topic_id'];
-
-                                // always gets set to the last index of the row
-                                $is_anonymous_list[$row[$array_key]]['last_index'] = $row['anonymous_index'];
-                        }
+                        $is_anonymous_list[$index][] = $row['is_anonymous'];
+                        $is_anonymous_list[$index]['poster_id'] = $row['poster_id'];
 
                         $index++;
                 }
@@ -159,37 +139,40 @@ class helper
                 $this->db->sql_freeresult($result);
                 unset($result);
 
+                // doesn't run if no anonymous usernames to change :)
+                if($continue)
+                {
+                        $username_query = 'SELECT username FROM ' . USERS_TABLE . '
+                                            WHERE user_id IN (' . implode(",", array_column($is_anonymous_list, 'poster_id')) . ')';
+
+                        $result2 = $testo = array();
+                        $result2 = $this->db->sql_query($username_query);
+
+                        $index = 0;
+                        while($row = $this->db->sql_fetchrow($result2))
+                        {
+                                $is_anonymous_list[$index][1] = $row['poster_id'];
+
+                                $index++;
+                        }
+
+                        $this->db->sql_freeresult($result2);
+                        unset($result2);
+                }
+
                 return $is_anonymous_list;
         }
 
-        public function get_poster_id($post_id)
+        /**
+        * get data from topicrow to use in the event to change it
+        * removes anonymous posts from "by author" search queries... unless the searcher is staff or the searchee himself
+        * i haven't found search_key_array to actually help at all
+        * 0.8.0. - removed that bit
+        * 0.8.6? - shortened to one line
+        * 0.9.5 - fixed that to actually work
+        */
+        public function remove_anonymous_from_author_posts($post_visibility, $is_staff)
         {
-                // poster id from post_id
-                $poster_id_query = 'SELECT poster_id FROM ' . POSTS_TABLE . '
-                                    WHERE post_id = ' . $post_id;
-
-                $result = array();
-                $result = $this->db->sql_query($poster_id_query);
-
-                $poster_id = 0;
-
-                $poster_id = (int) $this->db->sql_fetchfield('poster_id');
-
-                $this->db->sql_freeresult($result);
-                unset($result);
-
-                return $poster_id;
-        }
-
-        // removes anonymous posts from "by author" search queries... unless the searcher is staff or the searchee himself
-        public function remove_anonymous_from_author_posts($search_key_array, $post_visibility, $is_staff)
-        {
-                $no_anonymous_posts = $is_staff ?: ' AND IF(p.poster_id <> ' . $this->user->data['user_id'] . ', p.is_anonymous <> 1, p.poster_id = p.poster_id)';
-
-                // i haven't found search_key_array to actually help at all
-                // 0.8.0. - removed that bit
-                if(!$is_staff) $post_visibility .= $no_anonymous_posts;
-
-                return array('search_key_array' => $search_key_array, 'post_visibility' => $post_visibility);
+                return array('post_visibility' => ($is_staff ? $post_visibility : $post_visibility . ' AND IF(p.poster_id <> ' . $this->user->data['user_id'] . ', p.is_anonymous <> 1, p.poster_id = p.poster_id)'));
         }
 }

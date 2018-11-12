@@ -84,13 +84,10 @@ class listener implements EventSubscriberInterface
                         'core.viewtopic_assign_template_vars_before'        => 'viewtopic_assign_template_vars_before',
                         'core.viewtopic_post_rowset_data'                   => 'viewtopic_post_rowset_data',
                         'core.viewtopic_modify_post_row'                    => 'viewtopic_modify_post_row',
-                        'core.viewforum_modify_topics_data'                 => 'viewforum_modify_topics_data',
                         'core.viewforum_modify_topicrow'                    => 'viewforum_modify_topicrow',
-                        'paybas.recenttopics.modify_topics_list'            => 'recenttopics_modify_topics_list',
                         'paybas.recenttopics.modify_tpl_ary'                => 'recenttopics_modify_tpl_ary',
                         'core.display_forums_before'                        => 'display_forums_before',
                         'core.topic_review_modify_row'                      => 'topic_review_modify_row',
-                        'core.search_modify_rowset'                         => 'search_modify_rowset',
                         'core.search_modify_tpl_ary'                        => 'search_modify_tpl_ary',
                         'core.search_mysql_by_author_modify_search_key'     => 'search_mysql_by_author_modify_search_key',
                         'core.search_native_by_author_modify_search_key'    => 'search_native_by_author_modify_search_key',
@@ -98,7 +95,7 @@ class listener implements EventSubscriberInterface
                         'core.modify_posting_auth'                          => 'modify_posting_auth',
                         'core.posting_modify_template_vars'                 => 'posting_modify_template_vars',
                         'core.posting_modify_post_data'                     => 'posting_modify_post_data',
-			'core.modify_submit_post_data'                      => 'modify_submit_post_data',
+                        'core.posting_modify_submit_post_before'            => 'posting_modify_submit_post_before',
                         'core.submit_post_modify_sql_data'                  => 'submit_post_modify_sql_data',
                         'core.modify_submit_notification_data'              => 'modify_submit_notification_data',
                         'core.notification_manager_add_notifications'       => 'notification_manager_add_notifications',
@@ -187,16 +184,6 @@ class listener implements EventSubscriberInterface
                 $event['post_row'] = $post_row;
         }
 
-        // get array of first and last posts, check them for anonymity
-        public function viewforum_modify_topics_data($event)
-        {
-                $rowset = $event['rowset'];
-
-                $rowset = $this->rowset_handler($rowset);
-
-                $event['rowset'] = $rowset;
-        }
-
         // update first and last post in topicrow if they are anonymous
         public function viewforum_modify_topicrow($event)
         {
@@ -205,16 +192,6 @@ class listener implements EventSubscriberInterface
                 $topic_row = $this->row_handler($event['row'], $topic_row);
 
                 $event['topic_row'] = $topic_row;
-        }
-
-        // add support for Recent Topics extension
-        public function recenttopics_modify_topics_list($event)
-        {
-                $rowset = $event['rowset'];
-
-                $rowset = $this->rowset_handler($rowset);
-
-                $event['rowset'] = $rowset;
         }
 
         // modify recenttopicrow
@@ -232,7 +209,7 @@ class listener implements EventSubscriberInterface
         {
                 $forum_rows = $event['forum_rows'];
 
-                $forum_rows = $this->rowset_handler($forum_rows, 'f');
+                $forum_rows = $this->rowset_handler($forum_rows);
 
                 $event['forum_rows'] = $forum_rows;
         }
@@ -243,22 +220,10 @@ class listener implements EventSubscriberInterface
                 $post_row = $event['post_row'];
                 $is_anonymous = (bool)$event['row']['is_anonymous'];
 
-                $post_row['anonymous_index'] = $is_anonymous;
+                $post_row['anonymous_index'] = $event['row']['anonymous_index'];
                 $post_row = $this->row_handler($is_anonymous, $post_row, 'posts_topicreview');
 
                 $event['post_row'] = $post_row;
-        }
-
-        // add array of data for the topicrow in searches for if first/last post are anonymous
-        // runs once per page
-        public function search_modify_rowset($event)
-        {
-                $rowset = $event['rowset'];
-
-                if($event['show_results'] == 'topics')
-                        $rowset = $this->rowset_handler($rowset);
-
-                $event['rowset'] = $rowset;
         }
 
         // modify each search topicrow as done in the forumrow, modify username link in postrow
@@ -273,7 +238,7 @@ class listener implements EventSubscriberInterface
                         break;
                 default: // posts?
                         $tpl_ary['anonymous_index'] = $event['row']['anonymous_index'];
-                        $this->row_handler($event['row']['is_anonymous'], $tpl_ary, 'posts_searchrow');
+                        $tpl_ary = $this->row_handler($event['row']['is_anonymous'], $tpl_ary, 'posts_searchrow');
                         break;
                 }
 
@@ -283,28 +248,37 @@ class listener implements EventSubscriberInterface
         // untested
         public function search_mysql_by_author_modify_search_key($event)
         {
-                $results = $this->helper->remove_anonymous_from_author_posts($event['search_key_array'], $event['post_visibility'], $this->is_staff);
+                $post_visibility = $event['post_visibility'];
 
-                $event['search_key_array'] = $results['search_key_array'];
-                $event['post_visibility'] = $results['post_visibility'];
+                $results = $this->helper->remove_anonymous_from_author_posts($post_visibility, $this->is_staff);
+
+                $post_visibility = $results['post_visibility'];
+
+                $event['post_visibility'] = $post_visibility;
         }
 
         // when searching by author, don't show anonymous posts to people who arent the OP of it or staff.  clear cache to see results if updating
         public function search_native_by_author_modify_search_key($event)
         {
-                $results = $this->helper->remove_anonymous_from_author_posts($event['search_key_array'], $event['post_visibility'], $this->is_staff);
+                $post_visibility = $event['post_visibility'];
 
-                $event['search_key_array'] = $results['search_key_array'];
-                $event['post_visibility'] = $results['post_visibility'];
+                $results = $this->helper->remove_anonymous_from_author_posts($post_visibility, $this->is_staff);
+
+                $post_visibility = $results['post_visibility'];
+
+                $event['post_visibility'] = $post_visibility;
         }
 
         // untested
         public function search_postgres_by_author_modify_search_key($event)
         {
-                $results = $this->helper->remove_anonymous_from_author_posts($event['search_key_array'], $event['post_visibility'], $this->is_staff);
+                $post_visibility = $event['post_visibility'];
 
-                $event['search_key_array'] = $results['search_key_array'];
-                $event['post_visibility'] = $results['post_visibility'];
+                $results = $this->helper->remove_anonymous_from_author_posts($post_visibility, $this->is_staff);
+
+                $post_visibility = $results['post_visibility'];
+
+                $event['post_visibility'] = $post_visibility;
         }
 
         // add F_ANONPOST variable to posting.php
@@ -353,48 +327,123 @@ class listener implements EventSubscriberInterface
         }
 
         // add variables to $data for use in submit_post_modify_sql_data
-        public function modify_submit_post_data($event)
+        public function posting_modify_submit_post_before($event)
         {
                 $data = $event['data'];
+                $username = $event['post_author_name'];
 
                 // get checkbox value
                 $anonpost = $this->request->variable('anonpost', 0, true);
 
-                $data['fixed_poster_id'] = $this->helper->get_poster_id($data['post_id']);
+                $data['is_anonymous'] = $anonpost;
+                $data['was_anonymous'] = $event['post_data']['is_anonymous'];
+                $data['anonymous_index'] = ($anonpost && !$data['was_anonymous']) ? $this->helper->get_poster_index($data['topic_id'])
+                                            :(($anonpost && $data['was_anonymous']) ? $event['post_data']['anonymous_index']
+                                            // default
+                                            : 0);
 
-                if(isset($anonpost))
+                $data['forum_last_post_id'] = $event['post_data']['forum_last_post_id'];
+
+                // these two are for checking if when posting/replying not anonymously and there are indeces to update
+                if($event['post_data']['topic_last_anonymous_index'] > 0) $data['topic_last_anonymous_index'] = $event['post_data']['topic_last_anonymous_index'];
+                if($event['post_data']['forum_anonymous_index'] > 0) $data['forum_anonymous_index'] = $event['post_data']['forum_anonymous_index'];
+
+                // data for unsetting anonymous post
+                if(!$anonpost && $data['was_anonymous'])
                 {
-                        $data['is_anonymous'] = $anonpost;
-                        $data['anonymous_index'] = $this->helper->get_poster_index($data['topic_id']);
+                        $data['fixed_poster_id'] = $event['post_data']['poster_id_backup'];
+                        $username = $event['post_data']['topic_last_poster_name'];
                 }
 
                 $event['data'] = $data;
+                $event['post_author_name'] = $username;
         }
 
         // add is_anonymous to the sql data
         public function submit_post_modify_sql_data($event)
         {
                 $sql_data = $event['sql_data'];
+                $data = $event['data'];
+                $post_mode = $event['post_mode'];
+                $post_visibility = $data['post_visibility'];
+                $is_anonymous = (bool) $data['is_anonymous'];
+                $was_anonymous = (bool) $data['was_anonymous'];
 
-                if(isset($event['data']['is_anonymous']))
-                {
-                        $sql_data[POSTS_TABLE]['sql']['is_anonymous'] = $event['data']['is_anonymous'];
-                        $sql_data[POSTS_TABLE]['sql']['anonymous_index'] = $event['data']['anonymous_index'];
-                }
+                // universal
+                $sql_data[POSTS_TABLE]['sql']['is_anonymous'] = $is_anonymous;
 
-                // fix poster id getting deleted from sql data
-                // xor would work here, but $poster_id isnt always equal to 0 or 1...
-                if($event['data']['is_anonymous'] || ($sql_data[POSTS_TABLE]['sql']['poster_id'] === 1))
+                $topic_is_empty = false;
+                switch([$post_mode, $is_anonymous, $was_anonymous])
                 {
-                        switch($event['post_mode'])
+                /*
+                * NORMAL POSTS
+                * zeros out the current forum and topic (if this is not an op) anonymous index
+                */
+                case ['reply', false, false]:
+                case ['quote', false, false]:
+                        if(isset($data['topic_last_anonymous_index']))
+                                $sql_data[TOPICS_TABLE]['stat']['topic_last_anonymous_index'] = 'topic_last_anonymous_index = ' . 0;
+                case ['post', false, false]:
+                        if(isset($data['forum_anonymous_index']))
+                                $sql_data[FORUMS_TABLE]['stat']['forum_anonymous_index'] = 'forum_anonymous_index = ' . 0;
+
+                        break;
+                /*
+                * TOGGLE ON/CREATE ANONYMOUS POST
+                * if posting, replying, or quoting, creates anonymous post
+                * if editing a post to be anonymous, adds data to the posts/topics/forums tables depending on the edit mode
+                */
+                case ['post', true, false]:
+                case ['edit_topic', true, false]:
+                        $topic_is_empty = true;
+                case ['edit_first_post', true, false]:
+                        $sql_data[TOPICS_TABLE]['stat']['topic_first_is_anonymous'] = 'topic_first_is_anonymous = ' . true;
+                case ['reply', true, false]:
+                case ['quote', true, false]:
+                        $modify_forum_anon_index = true;
+                case ['edit_last_post', true, false]:
+                        if($event['post_mode'] !== 'edit_first_post')
                         {
-                                case 'edit_first_post':
-                                case 'edit':
-                                case 'edit_last_post':
-                                case 'edit_topic':
-                                        $sql_data[POSTS_TABLE]['sql']['poster_id'] = $event['data']['fixed_poster_id'];
-                                break;
+                                $fixed_anon_index = ($topic_is_empty ? 1 : $data['anonymous_index']);
+
+                                $sql_data[TOPICS_TABLE]['stat']['topic_last_anonymous_index'] = 'topic_last_anonymous_index = ' . $fixed_anon_index;
+
+                                if($modify_forum_anon_index || $data['post_id'] == $data['forum_last_post_id'])
+                                        $sql_data[FORUMS_TABLE]['stat']['forum_anonymous_index'] = 'forum_anonymous_index = ' . $fixed_anon_index;
                         }
+                case ['edit', true, false]:
+                        $sql_data[POSTS_TABLE]['sql']['anonymous_index'] = ($topic_is_empty ? 1 : $data['anonymous_index']);
+                        $sql_data[POSTS_TABLE]['sql']['poster_id_backup'] = $data['poster_id'];
+
+                        break;
+                /*
+                * TOGGLE OFF ANONYMOUS POST
+                * if editing a post and anonymous is removed, handles each case and updates the db accordingly
+                */
+                case ['edit_topic', false, true]:
+                case ['edit_first_post', false, true]:
+                        $sql_data[TOPICS_TABLE]['stat']['topic_first_is_anonymous'] = 'topic_first_is_anonymous = ' . false;
+
+                        // from includes/functions_posting.php ~ line 2060
+                        // testing shows that if there are only two posts that this is edit_last_post, but the files included it so I am too
+                        $first_post_has_topic_info = ($post_mode == 'edit_first_post' &&
+                                (($post_visibility == ITEM_DELETED && $data['topic_posts_softdeleted'] == 1) ||
+                                ($post_visibility == ITEM_UNAPPROVED && $data['topic_posts_unapproved'] == 1) ||
+                                ($post_visibility == ITEM_REAPPROVE && $data['topic_posts_unapproved'] == 1) ||
+                                ($post_visibility == ITEM_APPROVED && $data['topic_posts_approved'] == 1)));
+                case ['edit_last_post', false, true]:
+                        $first_post_has_topic_info = ($post_mode == 'edit_first_post' && $first_post_has_topic_info);
+
+                        if($first_post_has_topic_info || $post_mode != 'edit_first_post')
+                                $sql_data[TOPICS_TABLE]['stat']['topic_last_anonymous_index'] = 'topic_last_anonymous_index = ' . 0;
+
+                        if($first_post_has_topic_info || $data['post_id'] == $data['forum_last_post_id'])
+                                $sql_data[FORUMS_TABLE]['stat']['forum_anonymous_index'] = 'forum_anonymous_index = ' . 0;
+                case ['edit', false, true]:
+                        // posts table doesnt have this because poster id was set to 1 to make links unclickable
+                        $sql_data[POSTS_TABLE]['sql']['poster_id'] = $data['fixed_poster_id'];
+
+                        break;
                 }
 
                 $event['sql_data'] = $sql_data;
@@ -417,7 +466,7 @@ class listener implements EventSubscriberInterface
                                 $notification_data['post_username'] = $this->anonymous . ' ' . $event['data_ary']['anonymous_index'];
 
                                 $event['notification_data'] = $notification_data;
-                                bresk;
+                                break;
                         }
                 }
         }
@@ -449,7 +498,7 @@ class listener implements EventSubscriberInterface
                                 // get second xpath query to preserve index order to match is_anonymous_list
                                 // if their sizes dont match, for some reason a quote doesn't have an author... would there even be a notification?
                                 $quote_authors = $xpath->query('//QUOTE[not(ancestor::QUOTE)]/@author');
-                                $is_anonymous_list = $this->helper->is_anonymous(array_column($quote_data, 'post_id'), 'n');
+                                $is_anonymous_list = $this->helper->is_anonymous(array_column($quote_data, 'post_id'));
 
                                 foreach($quote_data as $index => $index)
                                         if(boolval($is_anonymous_list[$index][0]))
@@ -459,50 +508,22 @@ class listener implements EventSubscriberInterface
                                 $data['post_text'] = $dom->saveXML();
                         }
 
+                        // should this be in the if statement above?
                         $event['notify_users'] = $this->notification_manager->get_item_type_class($event['notification_type_name'])->find_users_for_notification($data, $event['options']);
                 }
         }
 
         // add common data to (usually) topic rowset... standardization
-        private function rowset_handler($generic_rowset, $mode = 't')
+        private function rowset_handler($generic_rowset)
         {
                 if(!$this->is_staff)
                 {
-                        $post_list = $mode == 'f' ? array_merge(array_column($generic_rowset, 'forum_last_post_id'))
-                                     : array_merge(array_column($generic_rowset, 'topic_first_post_id'), array_column($generic_rowset, 'topic_last_post_id'));
-                        $is_anonymous_list = $this->helper->is_anonymous($post_list, $mode);
-
                         foreach($generic_rowset as $index => $value)
                         {
-                                if($mode == 'f')
-                                {
-                                        $post_list_index = array_search($generic_rowset[$index]['forum_last_post_id'], $post_list);
-
-                                        if($post_list_index > 0)
-                                        {
-                                                $generic_rowset[$index]['forum_last_is_anonymous'] = $is_anonymous_list[$index][0];
-
-                                                if($generic_rowset[$index]['forum_last_is_anonymous'])
-                                                {       // is_anonymous_list[][1] is the topic_id
-                                                        $generic_rowset[$index]['forum_last_poster_name'] = $this->anonymous . ' ' . $is_anonymous_list[$index]['last_index'];
-                                                        $generic_rowset[$index]['forum_last_poster_colour'] = $generic_rowset[$index]['forum_last_poster_id'] = NULL;
-                                                }
-                                        }
-                                }
-                                else // mode == 't'
-                                {
-                                        $topic_id = $generic_rowset[$index]['topic_id'];
-
-                                        // fix last post null issue if topic has no replies (if last post isnt null, set equal to list[0]
-                                        $last_is_anonymous = $is_anonymous_list[$topic_id][1] ?? $is_anonymous_list[$topic_id][0];
-
-                                        $generic_rowset[$index]['topic_first_is_anonymous'] = $is_anonymous_list[$topic_id][0];
-                                        if($generic_rowset[$index]['topic_first_is_anonymous'])
-                                                $generic_rowset[$index]['topic_first_anonymous_name'] = $this->anonymous . ' ' . 1;
-
-                                        $generic_rowset[$index]['topic_last_is_anonymous'] = $last_is_anonymous;
-                                        if($generic_rowset[$index]['topic_last_is_anonymous'])
-                                                $generic_rowset[$index]['topic_last_anonymous_name'] = $this->anonymous . ' ' . $is_anonymous_list[$topic_id]['last_index'];
+                                if($generic_rowset[$index]['forum_anonymous_index'] > 0)
+                                {       // is_anonymous_list[][1] is the topic_id
+                                        $generic_rowset[$index]['forum_last_poster_name'] = $this->anonymous . ' ' . $generic_rowset[$index]['forum_anonymous_index'];
+                                        $generic_rowset[$index]['forum_last_poster_colour'] = $generic_rowset[$index]['forum_last_poster_id'] = NULL;
                                 }
                         }
                 }
@@ -514,61 +535,62 @@ class listener implements EventSubscriberInterface
         // for posts, $row is the is_anonymous variable from the db
         private function row_handler($row, $generic_row, $mode = 'topics')
         {
-                if(!$this->is_staff)
+                switch([$mode, $this->is_staff])
                 {
-                        switch($mode)
+                case ['topics', false]:
+                        if($row['topic_first_is_anonymous'])
                         {
-                        case 'topics':
-                                if($row['topic_first_is_anonymous'])
-                                {
-                                        $generic_row['TOPIC_AUTHOR'] = $generic_row['TOPIC_AUTHOR_FULL'] = $row['topic_first_anonymous_name'];
-                                        $generic_row['TOPIC_AUTHOR_COLOUR'] = NULL;
-                                }
-
-                                if($row['topic_last_is_anonymous'])
-                                {
-                                        $generic_row['LAST_POST_AUTHOR'] = $generic_row['LAST_POST_AUTHOR_FULL'] = $row['topic_last_anonymous_name'];
-                                        $generic_row['LAST_POST_AUTHOR_COLOUR'] = NULL;
-                                }
-                                break;
-                        case 'posts_searchrow':
-                        case 'posts_viewtopic':
-                        case 'posts_topicreview':
-                                $is_anonymous = $row;
-
-                                $generic_row['IS_ANONYMOUS'] = $is_anonymous;
-                                $generic_row['IS_STAFF'] = $this->is_staff;
-
-                                if($is_anonymous)
-                                {
-                                        $anonymous_name = $this->anonymous . ' ' . $generic_row['anonymous_index'];
-                                        $generic_row['POST_AUTHOR_FULL'] = $generic_row['POST_AUTHOR'] = $anonymous_name;
-                                        $generic_row['anonymous_index'] = NULL;
-
-                                        switch($mode)
-                                        {
-                                        case 'posts_viewtopic':
-                                                $generic_row['CONTACT_USER'] = $anonymous_name;
-
-                                                $generic_row['S_CUSTOM_FIELDS'] = $generic_row['S_FRIEND'] = $generic_row['POSTER_ID'] =
-                                                        $generic_row['U_JABBER'] = $generic_row['U_EMAIL'] = $generic_row['U_PM'] =
-                                                        $generic_row['U_SEARCH'] = $generic_row['S_ONLINE'] = $generic_row['ONLINE_IMG'] =
-                                                        $generic_row['SIGNATURE'] = $generic_row['POSTER_AGE'] = $generic_row['POSTER_WARNINGS'] =
-                                                        $generic_row['POSTER_AVATAR'] = $generic_row['POSTER_POSTS'] = $generic_row['POSTER_JOINED'] =
-                                                        $generic_row['RANK_IMG_SRC'] = $generic_row['RANK_IMG'] = $generic_row['RANK_TITLE'] =
-                                                        // next 3 add support for the Normal and Special Ranks extension
-                                                        $generic_row['EXTRA_RANK_IMG_SRC'] = $generic_row['EXTRA_RANK_IMG'] = $generic_row['EXTRA_RANK_TITLE'] =
-                                                        $generic_row['U_POST_AUTHOR'] = NULL;
-                                                break;
-                                        case 'posts_topicreview':
-                                                $generic_row['POSTER_QUOTE'] = $anonymous_name;
-                                                $generic_row['POST_AUTHOR_COLOUR'] = $generic_row['U_POST_AUTHOR'] =
-                                                $generic_row['S_FRIEND'] = $generic_row['USER_ID'] = NULL;
-                                                break;
-                                        }
-                                }
-                                break;
+                                $generic_row['TOPIC_AUTHOR'] = $generic_row['TOPIC_AUTHOR_FULL'] = $this->anonymous . ' ' . 1;
+                                $generic_row['TOPIC_AUTHOR_COLOUR'] = NULL;
                         }
+
+                        if($row['topic_last_anonymous_index'] > 0)
+                        {
+                                $generic_row['LAST_POST_AUTHOR'] = $generic_row['LAST_POST_AUTHOR_FULL'] = $this->anonymous . ' ' . $row['topic_last_anonymous_index'];
+                                $generic_row['LAST_POST_AUTHOR_COLOUR'] = NULL;
+                        }
+                        break;
+                case ['posts_searchrow', false]:
+                case ['posts_viewtopic', false]:
+                case ['posts_topicreview', false]:
+                        $is_anonymous = $row;
+
+                        if($is_anonymous)
+                        {
+                                $anonymous_name = $this->anonymous . ' ' . $generic_row['anonymous_index'];
+                                $generic_row['POST_AUTHOR_FULL'] = $generic_row['POST_AUTHOR'] = $anonymous_name;
+                                $generic_row['anonymous_index'] = NULL;
+
+                                switch($mode)
+                                {
+                                case 'posts_viewtopic':
+                                        $generic_row['CONTACT_USER'] = $anonymous_name;
+
+                                        $generic_row['S_CUSTOM_FIELDS'] = $generic_row['S_FRIEND'] = $generic_row['POSTER_ID'] =
+                                                $generic_row['U_JABBER'] = $generic_row['U_EMAIL'] = $generic_row['U_PM'] =
+                                                $generic_row['U_SEARCH'] = $generic_row['S_ONLINE'] = $generic_row['ONLINE_IMG'] =
+                                                $generic_row['SIGNATURE'] = $generic_row['POSTER_AGE'] = $generic_row['POSTER_WARNINGS'] =
+                                                $generic_row['POSTER_AVATAR'] = $generic_row['POSTER_POSTS'] = $generic_row['POSTER_JOINED'] =
+                                                $generic_row['RANK_IMG_SRC'] = $generic_row['RANK_IMG'] = $generic_row['RANK_TITLE'] =
+                                                // next 3 add support for the Normal and Special Ranks extension
+                                                $generic_row['EXTRA_RANK_IMG_SRC'] = $generic_row['EXTRA_RANK_IMG'] = $generic_row['EXTRA_RANK_TITLE'] =
+                                                $generic_row['U_POST_AUTHOR'] = NULL;
+                                        break;
+                                case 'posts_topicreview':
+                                        $generic_row['POSTER_QUOTE'] = $anonymous_name;
+                                        $generic_row['POST_AUTHOR_COLOUR'] = $generic_row['U_POST_AUTHOR'] =
+                                        $generic_row['S_FRIEND'] = $generic_row['USER_ID'] = NULL;
+                                        break;
+                                }
+                        }
+                case ['posts_searchrow', true]:
+                case ['posts_viewtopic', true]:
+                case ['posts_topicreview', true]:
+                        $is_anonymous = $row;
+
+                        $generic_row['IS_ANONYMOUS'] = $is_anonymous;
+                        $generic_row['IS_STAFF'] = $this->is_staff;
+                        break;
                 }
 
                 return $generic_row;
