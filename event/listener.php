@@ -181,7 +181,7 @@ class listener implements EventSubscriberInterface
 
                 // delete info from the deleted post hidden div so sneaky members cant find out who it was
                 // i did this the opposite way first, then reversed it into this shorter list... nothing should be missing
-                $post_row = $this->row_handler($is_anonymous, $post_row, 'posts_viewtopic');
+                $this->row_handler($is_anonymous, $post_row, 'posts_viewtopic');
 
                 // unique to this event
                 if($is_anonymous) $event['user_poster_data'] = $event['cp_row'] = NULL;
@@ -194,7 +194,7 @@ class listener implements EventSubscriberInterface
         {
                 $topic_row = $event['topic_row'];
 
-                $topic_row = $this->row_handler($event['row'], $topic_row);
+                $this->row_handler($event['row'], $topic_row);
 
                 $event['topic_row'] = $topic_row;
         }
@@ -204,7 +204,7 @@ class listener implements EventSubscriberInterface
         {
                 $tpl_ary = $event['tpl_ary'];
 
-                $tpl_ary = $this->row_handler($event['row'], $tpl_ary);
+                $this->row_handler($event['row'], $tpl_ary);
 
                 $event['tpl_ary'] = $tpl_ary;
         }
@@ -214,7 +214,7 @@ class listener implements EventSubscriberInterface
         {
                 $forum_rows = $event['forum_rows'];
 
-                $forum_rows = $this->rowset_handler($forum_rows);
+                $this->rowset_handler($forum_rows);
 
                 $event['forum_rows'] = $forum_rows;
         }
@@ -226,7 +226,7 @@ class listener implements EventSubscriberInterface
                 $is_anonymous = (bool)$event['row']['is_anonymous'];
 
                 $post_row['anonymous_index'] = $event['row']['anonymous_index'];
-                $post_row = $this->row_handler($is_anonymous, $post_row, 'posts_topicreview');
+                $this->row_handler($is_anonymous, $post_row, 'posts_topicreview');
 
                 $event['post_row'] = $post_row;
         }
@@ -239,11 +239,11 @@ class listener implements EventSubscriberInterface
                 switch($event['show_results'])
                 {
                 case 'topics':
-                        $tpl_ary = $this->row_handler($event['row'], $tpl_ary);
+                        $this->row_handler($event['row'], $tpl_ary);
                         break;
                 default: // posts?
                         $tpl_ary['anonymous_index'] = $event['row']['anonymous_index'];
-                        $tpl_ary = $this->row_handler($event['row']['is_anonymous'], $tpl_ary, 'posts_searchrow');
+                        $this->row_handler($event['row']['is_anonymous'], $tpl_ary, 'posts_searchrow');
                         break;
                 }
 
@@ -255,7 +255,7 @@ class listener implements EventSubscriberInterface
         {
                 $post_visibility = $event['post_visibility'];
 
-                $post_visibility = $this->helper->remove_anonymous_from_author_posts($post_visibility, $this->is_staff);
+                $this->helper->remove_anonymous_from_author_posts($post_visibility, $this->is_staff);
 
                 $event['post_visibility'] = $post_visibility;
         }
@@ -265,7 +265,7 @@ class listener implements EventSubscriberInterface
         {
                 $post_visibility = $event['post_visibility'];
 
-                $post_visibility = $this->helper->remove_anonymous_from_author_posts($post_visibility, $this->is_staff);
+                $this->helper->remove_anonymous_from_author_posts($post_visibility, $this->is_staff);
 
                 $event['post_visibility'] = $post_visibility;
         }
@@ -275,7 +275,7 @@ class listener implements EventSubscriberInterface
         {
                 $post_visibility = $event['post_visibility'];
 
-                $post_visibility = $this->helper->remove_anonymous_from_author_posts($post_visibility, $this->is_staff);
+                $this->helper->remove_anonymous_from_author_posts($post_visibility, $this->is_staff);
 
                 $event['post_visibility'] = $post_visibility;
         }
@@ -289,14 +289,15 @@ class listener implements EventSubscriberInterface
                 ));
         }
 
-        // change poster information in quotes
+        // change poster information in quotes, modify post_data for posting_modify_submit_post_before
         public function posting_modify_post_data($event)
         {
                 $post_data = $event['post_data'];
+                $post_data['is_checked'] = $this->request->variable('anonpost', 0, true);
 
                 // keep checkbox checked only if editing a post, otherwise it is unchecked by default
                 $this->template->assign_vars(array(
-                        'POST_IS_ANONYMOUS' => (($event['mode'] == 'edit') && $post_data['is_anonymous']) ? 'checked' : '',
+                        'POST_IS_ANONYMOUS' => (($event['mode'] == 'edit') && $post_data['is_anonymous'] || $post_data['is_checked']) ? 'checked' : '',
                 ));
 
                 if($post_data['is_anonymous'])
@@ -310,7 +311,6 @@ class listener implements EventSubscriberInterface
         }
 
         // removes the username field from posting.php if editing an anonymous post
-        // change poster information in quotes, modify post_data for posting_modify_submit_post_before
         public function posting_modify_template_vars($event)
         {
                 $page_data = $event['page_data'];
@@ -334,7 +334,7 @@ class listener implements EventSubscriberInterface
                 $username = $event['post_author_name'];
 
                 // get checkbox value
-                $anonpost = $this->request->variable('anonpost', 0, true);
+                $anonpost = $event['post_data']['is_checked'];
 
                 $data['is_anonymous'] = $anonpost;
                 $data['was_anonymous'] = $event['post_data']['is_anonymous'];
@@ -352,7 +352,7 @@ class listener implements EventSubscriberInterface
                 // data for unsetting anonymous post
                 if($data['was_anonymous'])
                 {
-                        $data['fixed_poster_id'] = $event['post_data']['poster_id'];
+                        $data['fixed_poster_id'] = $event['post_data']['poster_id_backup'];
                         if(!$anonpost) $username = $event['post_data']['topic_last_poster_name'];
                 }
 
@@ -457,6 +457,7 @@ class listener implements EventSubscriberInterface
                         break;
                 }
 
+                $event['data'] = $data;
                 $event['sql_data'] = $sql_data;
         }
 
@@ -531,7 +532,7 @@ class listener implements EventSubscriberInterface
         }
 
         // change last poster information in forum index only, keeping it in its own function down here to place it by row handler
-        private function rowset_handler($generic_rowset)
+        private function rowset_handler(&$generic_rowset)
         {
                 if(!$this->is_staff)
                 {
@@ -550,7 +551,7 @@ class listener implements EventSubscriberInterface
 
         // processes row data from posts in a topic/topics in a forum
         // for posts, removes all sensitive info. for topics, changes their first/last poster name
-        private function row_handler($row, $generic_row, $mode = 'topics')
+        private function row_handler($row, &$generic_row, $mode = 'topics')
         {
                 switch([$mode, $this->is_staff])
                 {

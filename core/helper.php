@@ -115,7 +115,7 @@ class helper
                         WHERE user_id = ' . $user_id;
 
                 $result = $this->db->sql_query($sql);
-                $username = $this->db->sql_fetchrow($result);
+                $username = $this->db->sql_fetchfield('username');
                 $this->db->sql_freeresult($result);
                 unset($result);
 
@@ -186,8 +186,8 @@ class helper
         * 0.8.6? - shortened to one line
         * 0.9.5 - fixed that to actually work
         */
-        public function remove_anonymous_from_author_posts($post_visibility, $is_staff)
+        public function remove_anonymous_from_author_posts(&$post_visibility, $is_staff)
         {
-                return ($is_staff ? $post_visibility : $post_visibility . ' AND IF(p.poster_id <> ' . $this->user->data['user_id'] . ', p.is_anonymous <> 1, p.poster_id = p.poster_id)');
+                $post_visibility = ($is_staff ? $post_visibility : $post_visibility . ' AND IF(p.poster_id <> ' . $this->user->data['user_id'] . ', p.is_anonymous <> 1, p.poster_id = p.poster_id)');
         }
 }
