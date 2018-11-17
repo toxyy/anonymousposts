@@ -94,6 +94,7 @@ class listener implements EventSubscriberInterface
                         'core.search_native_by_author_modify_search_key'    => 'search_native_by_author_modify_search_key',
                         'core.search_postgres_by_author_modify_search_key'  => 'search_postgres_by_author_modify_search_key',
                         'core.modify_posting_auth'                          => 'modify_posting_auth',
+                        'core.posting_modify_post_data'                     => 'posting_modify_post_data',
                         'core.posting_modify_template_vars'                 => 'posting_modify_template_vars',
                         'core.posting_modify_submit_post_before'            => 'posting_modify_submit_post_before',
                         'core.submit_post_modify_sql_data'                  => 'submit_post_modify_sql_data',
@@ -288,21 +289,10 @@ class listener implements EventSubscriberInterface
                 ));
         }
 
-        // removes the username field from posting.php if editing an anonymous post
-        // change poster information in quotes, modify post_data for posting_modify_submit_post_before
-        public function posting_modify_template_vars($event)
+        // change poster information in quotes
+        public function posting_modify_post_data($event)
         {
                 $post_data = $event['post_data'];
-                $page_data = $event['page_data'];
-
-                // this is the same as in posting.php on line ~1798, with one variable added
-                $page_data['S_DISPLAY_USERNAME'] = (!$this->helper->is_registered() ||
-                                                            ($event['mode'] == 'edit' &&
-                                                                    (!$event['post_data']['is_anonymous'] &&
-                                                                            ($event['post_data']['poster_id'] == ANONYMOUS)
-                                                                    )
-                                                            )
-                                                    ) ? 1 : 0;
 
                 // keep checkbox checked only if editing a post, otherwise it is unchecked by default
                 $this->template->assign_vars(array(
@@ -317,6 +307,23 @@ class listener implements EventSubscriberInterface
                 }
 
                 $event['post_data'] = $post_data;
+        }
+
+        // removes the username field from posting.php if editing an anonymous post
+        // change poster information in quotes, modify post_data for posting_modify_submit_post_before
+        public function posting_modify_template_vars($event)
+        {
+                $page_data = $event['page_data'];
+
+                // this is the same as in posting.php on line ~1798, with one variable added
+                $page_data['S_DISPLAY_USERNAME'] = (!$this->helper->is_registered() ||
+                                                            ($event['mode'] == 'edit' &&
+                                                                    (!$event['post_data']['is_anonymous'] &&
+                                                                            ($event['post_data']['poster_id'] == ANONYMOUS)
+                                                                    )
+                                                            )
+                                                    ) ? 1 : 0;
+
                 $event['page_data'] = $page_data;
         }
 
