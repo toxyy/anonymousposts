@@ -107,6 +107,21 @@ class helper
                 return $this->user->data['is_registered'];
         }
 
+        // get username from db via user_id, needed for deanonymizing notifications
+        public function get_username($user_id)
+        {
+                $sql = 'SELECT username
+                        FROM ' . USERS_TABLE . '
+                        WHERE user_id = ' . $user_id;
+
+                $result = $this->db->sql_query($sql);
+                $username = $this->db->sql_fetchrow($result);
+                $this->db->sql_freeresult($result);
+                unset($result);
+
+                return $username;
+        }
+
         /**
         * get data from topicrow to use in the event to change it
         * supports three modes: t (default), f, and n (topic, forum, and notification)
@@ -173,6 +188,6 @@ class helper
         */
         public function remove_anonymous_from_author_posts($post_visibility, $is_staff)
         {
-                return array('post_visibility' => ($is_staff ? $post_visibility : $post_visibility . ' AND IF(p.poster_id <> ' . $this->user->data['user_id'] . ', p.is_anonymous <> 1, p.poster_id = p.poster_id)'));
+                return ($is_staff ? $post_visibility : $post_visibility . ' AND IF(p.poster_id <> ' . $this->user->data['user_id'] . ', p.is_anonymous <> 1, p.poster_id = p.poster_id)');
         }
 }
