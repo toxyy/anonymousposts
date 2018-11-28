@@ -10,17 +10,18 @@
 
 if (!defined('IN_PHPBB'))
 {
-	exit;
+        exit;
 }
 
 if (empty($lang) || !is_array($lang))
 {
-	$lang = [];
+        $lang = [];
 }
 
 $lang = array_merge($lang, [
-	'ANP_DEFAULT'       => 'Anonymous',
-	'ANP_MESSAGE'       => 'Anonymous post',
-	'ANP_ACTION'        => 'Post Anonymously',
-        'ANP_PERMISSIONS'   => 'Can post anonymously',
+        'ANP_DEFAULT'           => 'Anonymous',
+        'ANP_MESSAGE'           => 'Anonymous post',
+        'ANP_ACTION'            => 'Post Anonymously',
+        'ANP_PERMISSIONS'       => 'Can post anonymously',
+        'ANP_EDIT_PERMISSIONS'  => 'Can edit anonymous status',
 ]);

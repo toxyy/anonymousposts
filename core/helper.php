@@ -40,14 +40,14 @@ class helper
 	}
 
         // get unique poster index for consistent distinct anonymous posters
-        public function get_poster_index($topic_id)
+        public function get_poster_index($topic_id, $poster_id)
         {
                 // have we already anonymously posted in this topic?
                 // 0.7.0 - redundancy added (AND anonymous_index > 0)
                 $anon_index_query = 'SELECT anonymous_index
                                         FROM ' . POSTS_TABLE . '
                                         WHERE topic_id = ' . $topic_id . '
-                                        AND poster_id = ' . $this->user->data['user_id'] . '
+                                        AND poster_id = ' . $poster_id . '
                                         AND is_anonymous = 1
                                         AND anonymous_index > 0
                                         ORDER BY post_time ASC LIMIT 1';
@@ -105,6 +105,11 @@ class helper
         public function is_registered()
         {
                 return $this->user->data['is_registered'];
+        }
+
+        public function get_user_id()
+        {
+                return $this->user->data['user_id'];
         }
 
         // get username from db via user_id, needed for deanonymizing notifications
