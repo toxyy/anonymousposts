@@ -48,7 +48,6 @@ class helper
                                         FROM ' . POSTS_TABLE . '
                                         WHERE topic_id = ' . $topic_id . '
                                         AND poster_id = ' . $poster_id . '
-                                        AND is_anonymous = 1
                                         AND anonymous_index > 0
                                         ORDER BY post_time ASC LIMIT 1';
 
@@ -57,18 +56,18 @@ class helper
 
                 // these two get index of this post in that list
                 $anonymous_index = (int) $this->db->sql_fetchfield('anonymous_index');
-                $poster_index = !($anonymous_index >= 0) ?: $anonymous_index;
 
+                $poster_index = $anonymous_index;
                 $this->db->sql_freeresult($result);
                 unset($result);
 
                 // this only runs if we've never posted in this topic, having data from previous query...
                 if($poster_index == 0)
                 {
-                        $anon_index_query = 'SELECT COUNT(DISTINCT(poster_id)) as anon_index
+                        $anon_index_query = 'SELECT COUNT(DISTINCT(poster_id)) AS anon_index
                                                 FROM ' . POSTS_TABLE . '
-                                                WHERE topic_id = ' . $topic_id . '
-                                                AND is_anonymous = 1';
+                                                WHERE (topic_id = ' . $topic_id . ' AND anonymous_index > 0)
+                                                OR (topic_id = ' . $topic_id . ' AND is_anonymous = 1)';
 
                         $result = array();
                         $result = $this->db->sql_query($anon_index_query);
@@ -79,7 +78,7 @@ class helper
                         unset($result);
                 }
 
-                return $poster_index;
+                return (($poster_index == 0) ? 1 : $poster_index);
         }
 
         /**
@@ -127,13 +126,7 @@ class helper
                 return $username;
         }
 
-        /**
-        * get data from topicrow to use in the event to change it
-        * supports three modes: t (default), f, and n (topic, forum, and notification)
-        * topic mode returns first and last post checked in pairs [0] and [1] in the array
-        * forum mode returns last post checked and topic id in pairs [0] and [1]
-        * notification mode returns post_id checked and username in pairs [0] and [1]
-        */
+        // get data from topicrow to use in the event to change it
         public function is_anonymous($post_list)
         {
                 $is_anonymous_query = 'SELECT anonymous_index, is_anonymous, poster_id
@@ -183,13 +176,52 @@ class helper
                 return $is_anonymous_list;
         }
 
+        // data from delete_post_after gives old info, post_id and next_post_id don't give the right one either
+        public function delete_last_post_fix($forum_id, $topic_id)
+        {
+                $this->db->sql_transaction('begin');
+
+                $sql = 'SELECT topic_last_post_id
+                        FROM ' . TOPICS_TABLE . '
+                        WHERE topic_id = ' . $topic_id;
+
+                $result = $this->db->sql_query($sql);
+                $topic_last_post_id = $this->db->sql_fetchfield('topic_last_post_id');
+                $this->db->sql_freeresult($result);
+
+                $sql = 'SELECT is_anonymous, anonymous_index
+                        FROM ' . POSTS_TABLE . '
+                        WHERE post_id = ' . $topic_last_post_id;
+
+                $result = $this->db->sql_query($sql);
+                while($row = $this->db->sql_fetchrow($result))
+                {
+                        $is_anonymous = $row['is_anonymous'];
+                        $anonymous_index = $row['anonymous_index'];
+                }
+                $this->db->sql_freeresult($result);
+                unset($result);
+
+                if($is_anonymous)
+                {
+                        $sql = 'UPDATE ' . TOPICS_TABLE . '
+                                SET topic_last_anonymous_index = ' . $anonymous_index . '
+                                WHERE topic_id = ' . $topic_id;
+                        $this->db->sql_query($sql);
+
+                        $sql = 'UPDATE ' . FORUMS_TABLE . '
+                                SET forum_anonymous_index = ' . $anonymous_index . '
+                                WHERE forum_id = ' . $forum_id;
+                        $this->db->sql_query($sql);
+                }
+
+                $this->db->sql_transaction('commit');
+        }
+
         /**
         * get data from topicrow to use in the event to change it
-        * removes anonymous posts from "by author" search queries... unless the searcher is staff or the searchee himself
+        * removes anonymous posts from "by author" search queries... unless the searcher is staff or the searches himself
         * i haven't found search_key_array to actually help at all
-        * 0.8.0. - removed that bit
-        * 0.8.6? - shortened to one line
-        * 0.9.5 - fixed that to actually work
         */
         public function remove_anonymous_from_author_posts(&$post_visibility, $is_staff)
         {

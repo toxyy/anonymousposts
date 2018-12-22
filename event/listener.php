@@ -44,14 +44,14 @@ class listener implements EventSubscriberInterface
         /**
         * Constructor
         *
-        * @param \phpbb\language\language                                   $language
-        * @param \phpbb\template\template                                   $template
-        * @param \phpbb\auth\auth                                           $auth
-        * @param \phpbb\request\request                                     $request
-        * @param \phpbb\notification\manager                                $notification_manager
-        * @param \toxyy\anonymousposts\core\helper                          $helper
-        * @param \toxyy\anonymousposts\core\helper->is_staff()              $is_staff
-        * @param \toxyy\anonymousposts\language->lang('ANP_DEFAULT')        $anonymous
+        * @param \phpbb\language\language                                       $language
+        * @param \phpbb\template\template                                       $template
+        * @param \phpbb\auth\auth                                               $auth
+        * @param \phpbb\request\request                                         $request
+        * @param \phpbb\notification\manager                                    $notification_manager
+        * @param \toxyy\anonymousposts\core\helper                              $helper
+        * @param \toxyy\anonymousposts\core\helper->is_staff()                  $is_staff
+        * @param \toxyy\anonymousposts\language->lang('ANP_DEFAULT')            $anonymous
         *
         */
         public function __construct(
@@ -65,43 +65,45 @@ class listener implements EventSubscriberInterface
                 $anonymous = ''
         )
         {
-                $this->language                                             = $language;
-                $this->template                                             = $template;
-                $this->auth                                                 = $auth;
-                $this->request                                              = $request;
-                $this->notification_manager                                 = $notification_manager;
-                $this->helper                                               = $helper;
-                $this->is_staff                                             = $is_staff;
-                $this->anonymous                                            = $anonymous;
+                $this->language                                                 = $language;
+                $this->template                                                 = $template;
+                $this->auth                                                     = $auth;
+                $this->request                                                  = $request;
+                $this->notification_manager                                     = $notification_manager;
+                $this->helper                                                   = $helper;
+                $this->is_staff                                                 = $is_staff;
+                $this->anonymous                                                = $anonymous;
         }
 
         static public function getSubscribedEvents()
         {
                 return [
-                        'core.user_setup'                                   => 'core_user_setup',
-                        'core.user_setup_after'                             => 'user_setup_after',
-                        'core.permissions'                                  => 'core_permissions',
-                        'core.viewtopic_assign_template_vars_before'        => 'viewtopic_assign_template_vars_before',
-                        'core.mcp_global_f_read_auth_after'                 => 'mcp_global_f_read_auth_after',
-                        'core.modify_posting_auth'                          => 'modify_posting_auth',
-                        'core.viewtopic_post_rowset_data'                   => 'viewtopic_post_rowset_data',
-                        'core.viewtopic_modify_post_row'                    => 'viewtopic_modify_post_row',
-                        'core.viewforum_modify_topicrow'                    => 'viewforum_modify_topicrow',
-                        'paybas.recenttopics.modify_tpl_ary'                => 'recenttopics_modify_tpl_ary',
-                        'core.display_forums_before'                        => 'display_forums_before',
-                        'core.topic_review_modify_row'                      => 'topic_review_modify_row',
-                        'core.display_user_activity_modify_sql'             => 'display_user_activity_modify_sql',
-                        'core.search_modify_tpl_ary'                        => 'search_modify_tpl_ary',
-                        'core.search_mysql_by_author_modify_search_key'     => 'search_mysql_by_author_modify_search_key',
-                        'core.search_native_by_author_modify_search_key'    => 'search_native_by_author_modify_search_key',
-                        'core.search_postgres_by_author_modify_search_key'  => 'search_postgres_by_author_modify_search_key',
-                        'core.posting_modify_post_data'                     => 'posting_modify_post_data',
-                        'core.posting_modify_template_vars'                 => 'posting_modify_template_vars',
-                        'core.posting_modify_submit_post_before'            => 'posting_modify_submit_post_before',
-                        'core.posting_modify_default_variables'             => 'posting_modify_default_variables',
-                        'core.submit_post_modify_sql_data'                  => 'submit_post_modify_sql_data',
-                        'core.modify_submit_notification_data'              => 'modify_submit_notification_data',
-                        'core.notification_manager_add_notifications'       => 'notification_manager_add_notifications',
+                        'core.user_setup'                                       => 'core_user_setup',
+                        'core.user_setup_after'                                 => 'user_setup_after',
+                        'core.permissions'                                      => 'core_permissions',
+                        'core.viewtopic_assign_template_vars_before'            => 'viewtopic_assign_template_vars_before',
+                        'core.mcp_global_f_read_auth_after'                     => 'mcp_global_f_read_auth_after',
+                        'core.modify_posting_auth'                              => 'modify_posting_auth',
+                        'core.viewtopic_post_rowset_data'                       => 'viewtopic_post_rowset_data',
+                        'core.viewtopic_modify_post_row'                        => 'viewtopic_modify_post_row',
+                        'core.viewforum_modify_topicrow'                        => 'viewforum_modify_topicrow',
+                        'paybas.recenttopics.modify_tpl_ary'                    => 'recenttopics_modify_tpl_ary',
+                        'core.ucp_main_topiclist_topic_modify_template_vars'    => 'ucp_main_topiclist_topic_modify_template_vars',
+                        'core.display_forums_before'                            => 'display_forums_before',
+                        'core.topic_review_modify_row'                          => 'topic_review_modify_row',
+                        'core.display_user_activity_modify_sql'                 => 'display_user_activity_modify_sql',
+                        'core.search_modify_tpl_ary'                            => 'search_modify_tpl_ary',
+                        'core.search_mysql_by_author_modify_search_key'         => 'search_mysql_by_author_modify_search_key',
+                        'core.search_native_by_author_modify_search_key'        => 'search_native_by_author_modify_search_key',
+                        'core.search_postgres_by_author_modify_search_key'      => 'search_postgres_by_author_modify_search_key',
+                        'core.posting_modify_post_data'                         => 'posting_modify_post_data',
+                        'core.posting_modify_template_vars'                     => 'posting_modify_template_vars',
+                        'core.posting_modify_submit_post_before'                => 'posting_modify_submit_post_before',
+                        'core.posting_modify_default_variables'                 => 'posting_modify_default_variables',
+                        'core.submit_post_modify_sql_data'                      => 'submit_post_modify_sql_data',
+                        'core.delete_post_after'                                => 'delete_post_after',
+                        'core.modify_submit_notification_data'                  => 'modify_submit_notification_data',
+                        'core.notification_manager_add_notifications'           => 'notification_manager_add_notifications',
                 ];
         }
 
@@ -218,6 +220,14 @@ class listener implements EventSubscriberInterface
                 $tpl_ary = $event['tpl_ary'];
                 $this->row_handler($event['row'], $tpl_ary);
                 $event['tpl_ary'] = $tpl_ary;
+        }
+
+        // handles subscribed/bookmarked topics in the ucp
+        public function ucp_main_topiclist_topic_modify_template_vars($event)
+        {
+                $template_vars = $event['template_vars'];
+                $this->row_handler($event['row'], $template_vars);
+                $event['template_vars'] = $template_vars;
         }
 
         // handles changing the last poster name for forumrow
@@ -377,7 +387,14 @@ class listener implements EventSubscriberInterface
                 {
                         if($data['is_anonymous'])
                         {
-                                if($data['was_anonymous'] || ($data['anonymous_index'] > 0)) return $data['anonymous_index'];
+                                if($data['was_anonymous'])
+                                {
+                                        if($data['anonymous_index'] > 0) return $data['anonymous_index'];
+
+                                        return $this->helper->get_poster_index($data['topic_id'], $data['poster_id']);
+                                }
+
+                                if($data['anonymous_index'] > 0) return $data['anonymous_index'];
                                 else return $this->helper->get_poster_index($data['topic_id'], $data['poster_id']);
                         }
 
@@ -451,7 +468,6 @@ class listener implements EventSubscriberInterface
                 * if editing a post to be anonymous, adds data to the posts/topics/forums tables depending on the edit mode
                 */
                 case ['post', true, false]:
-                        $posting = true;
                 case ['edit_topic', true, false]:
                         $topic_is_empty = true;
                 case ['edit_first_post', true, false]:
@@ -516,6 +532,15 @@ class listener implements EventSubscriberInterface
 
                 $event['data'] = $data;
                 $event['sql_data'] = $sql_data;
+        }
+
+        // if a post is soft deleted, topic_last_anonymous_index in the topics table needs to be updated
+        public function delete_post_after($event)
+        {
+                if($event['post_mode'] == 'delete_last_post')
+                {
+                        $this->helper->delete_last_post_fix($event['forum_id'], $event['topic_id']);
+                }
         }
 
         // edit notifications data to account for anonymous submissions
