@@ -102,6 +102,7 @@ class listener implements EventSubscriberInterface
                         'core.posting_modify_default_variables'                 => 'posting_modify_default_variables',
                         'core.submit_post_modify_sql_data'                      => 'submit_post_modify_sql_data',
                         'core.delete_post_after'                                => 'delete_post_after',
+                        'core.approve_posts_after'                              => 'approve_posts_after',
                         'core.modify_submit_notification_data'                  => 'modify_submit_notification_data',
                         'core.notification_manager_add_notifications'           => 'notification_manager_add_notifications',
                 ];
@@ -316,27 +317,16 @@ class listener implements EventSubscriberInterface
         {
                 $post_data = $event['post_data'];
                 $post_data['is_checked'] = $this->request->variable('anonpost', 0);
+                $mode = $event['mode'];
 
                 // keep checkbox checked only if editing a post, otherwise it is unchecked by default
-                if($event['mode'] == 'edit')
+                if($mode == 'edit')
                 {
-                        $checkbox_attributes = '';
-
                         // don't allow non staff (by default at least) to edit anon status, makes webmasters happy
                         if(!($this->auth->acl_get('f_edit_anonpost', $event['forum_id']) && $this->auth->acl_get('u_edit_anonpost')))
                         {
                                 $post_data['is_checked'] = $post_data['is_anonymous'];
-                                $checkbox_attributes = 'disabled';
                         }
-
-                        if($post_data['is_anonymous'])
-                        {
-                                $checkbox_attributes = 'checked ' . $checkbox_attributes;
-                        }
-
-                        $this->template->assign_vars(array(
-                                'POST_IS_ANONYMOUS' => $checkbox_attributes,
-                        ));
                 }
 
                 if($post_data['is_anonymous'])
@@ -363,6 +353,23 @@ class listener implements EventSubscriberInterface
                                                             )
                                                     ) ? 1 : 0;
 
+                // keep checkbox checked if someone posts before you're done... might work for if your post was edited too, haven't tested
+                if($event['mode'] == 'edit' || $event['preview'] || !empty($event['error']) || (!$event['submit'] && $event['refresh'] && $this->template->retrieve_var('S_POST_REVIEW')))
+                {
+                        $checkbox_attributes = '';
+
+                        // don't allow non staff (by default at least) to edit anon status, makes webmasters happy
+                        if($event['mode'] == 'edit' && !($this->auth->acl_get('f_edit_anonpost', $event['forum_id']) && $this->auth->acl_get('u_edit_anonpost')))
+                                $checkbox_attributes = 'disabled';
+
+                        if($event['post_data']['is_anonymous'] || $event['post_data']['is_checked'])
+                                $checkbox_attributes = 'checked ' . $checkbox_attributes;
+
+                        $this->template->assign_vars(array(
+                                'POST_IS_ANONYMOUS' => $checkbox_attributes,
+                        ));
+                }
+
                 $event['page_data'] = $page_data;
         }
 
@@ -375,12 +382,12 @@ class listener implements EventSubscriberInterface
                 // get checkbox value
                 $anonpost = $event['post_data']['is_checked'];
 
+                $post_mode = $event['mode'];
                 $data['is_anonymous'] = $anonpost;
-                $data['was_anonymous'] = $event['post_data']['is_anonymous'];
+                $data['was_anonymous'] = ($post_mode == 'edit') ? $event['post_data']['is_anonymous'] : 0;
 
                 // need to use these 2 in the lambda
-                $data['anonymous_index'] = $event['post_data']['anonymous_index'];
-                $post_mode = $event['mode'];
+                $data['anonymous_index'] = ($post_mode == 'edit') ? $event['post_data']['anonymous_index'] : 0;
 
                 // fixed to return 1 for new topics, and mean it this time... wouldn't work sometimes for some weird reason
                 $get_anon_index = function() use($data, $post_mode)
@@ -535,11 +542,34 @@ class listener implements EventSubscriberInterface
         }
 
         // if a post is soft deleted, topic_last_anonymous_index in the topics table needs to be updated
+        // seems incomplete compared to approve_posts_after... might need to make a PR to have access to more data, maybe
         public function delete_post_after($event)
         {
                 if($event['post_mode'] == 'delete_last_post')
                 {
-                        $this->helper->delete_last_post_fix($event['forum_id'], $event['topic_id']);
+                        $this->helper->last_post_fix($event['forum_id'], $event['topic_id'], 0, true, true);
+                }
+        }
+
+        // if a post is restored, topic_last_anonymous_index in the topics table needs to be updated (maybe for approved posts too not sure about other cases)
+        public function approve_posts_after($event)
+        {
+                if($event['action'] == 'restore')
+                {
+                        $post_info = $event['post_info'];
+
+                        // only tested for restoring an indivudual post
+                        if(count($post_info) == 1)
+                        {
+                                $post_id = key($post_info);
+
+                                // do we have to update the topic anon index?
+                                if($post_info[$post_id]['post_id'] > $post_info[$post_id]['topic_last_post_id'])
+                                {       // do we have to update the forum anon index too?
+                                        $forum_update = (!($post_info[$post_id]['anonymous_index'] == $post_info[$post_id]['forum_anonymous_index']) && ($post_id >= $post_info[$post_id]['forum_last_post_id']));
+                                        $this->helper->last_post_fix($post_info[$post_id]['forum_id'], $post_info[$post_id]['topic_id'], $post_id, $forum_update);
+                                }
+                        }
                 }
         }
 

@@ -176,23 +176,25 @@ class helper
                 return $is_anonymous_list;
         }
 
-        // data from delete_post_after gives old info, post_id and next_post_id don't give the right one either
-        public function delete_last_post_fix($forum_id, $topic_id)
+        // data from delete_post_after/approve_posts_after (softdelete & restore) gives old info, post_id and next_post_id don't give the right one either
+        public function last_post_fix($forum_id, $topic_id, $topic_last_post_id = 0, $forum_update = true, $delete_mode = false)
         {
-                $this->db->sql_transaction('begin');
+                if($topic_last_post_id == 0)
+                {
+                        $sql = 'SELECT topic_last_post_id
+                                FROM ' . TOPICS_TABLE . '
+                                WHERE topic_id = ' . $topic_id;
 
-                $sql = 'SELECT topic_last_post_id
-                        FROM ' . TOPICS_TABLE . '
-                        WHERE topic_id = ' . $topic_id;
-
-                $result = $this->db->sql_query($sql);
-                $topic_last_post_id = $this->db->sql_fetchfield('topic_last_post_id');
-                $this->db->sql_freeresult($result);
+                        $result = $this->db->sql_query($sql);
+                        $topic_last_post_id = $this->db->sql_fetchfield('topic_last_post_id');
+                        $this->db->sql_freeresult($result);
+                }
 
                 $sql = 'SELECT is_anonymous, anonymous_index
                         FROM ' . POSTS_TABLE . '
                         WHERE post_id = ' . $topic_last_post_id;
 
+                $anonymous_index = 0;
                 $result = $this->db->sql_query($sql);
                 while($row = $this->db->sql_fetchrow($result))
                 {
@@ -202,16 +204,21 @@ class helper
                 $this->db->sql_freeresult($result);
                 unset($result);
 
-                if($is_anonymous)
-                {
-                        $sql = 'UPDATE ' . TOPICS_TABLE . '
-                                SET topic_last_anonymous_index = ' . $anonymous_index . '
-                                WHERE topic_id = ' . $topic_id;
-                        $this->db->sql_query($sql);
+                $this->db->sql_transaction('begin');
 
+                $fixed_index = ($is_anonymous ? $anonymous_index : 0);
+                $sql = 'UPDATE ' . TOPICS_TABLE . '
+                        SET topic_last_anonymous_index = ' . $fixed_index . '
+                        WHERE topic_id = ' . $topic_id;
+                $this->db->sql_query($sql);
+
+                if($forum_update)
+                {
                         $sql = 'UPDATE ' . FORUMS_TABLE . '
-                                SET forum_anonymous_index = ' . $anonymous_index . '
-                                WHERE forum_id = ' . $forum_id;
+                                SET forum_anonymous_index = ' . $fixed_index . '
+                                WHERE forum_id = ' . $forum_id .
+                                // dont update forum index if the next post in the topic isnt the forum last post id...
+                                ((!$delete_mode) ?'': (' AND forum_last_post_id = ' . $topic_last_post_id));
                         $this->db->sql_query($sql);
                 }
 
