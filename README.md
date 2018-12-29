@@ -1,4 +1,4 @@
-# PhpBB Extension - toxyy Anonymous Posts v0.9.10
+# PhpBB Extension - toxyy Anonymous Posts v0.9.11
 
 [Topic on phpBB.com](https://www.phpbb.com/community/viewtopic.php?f=456&t=2488071)
 
