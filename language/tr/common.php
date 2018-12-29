@@ -8,15 +8,16 @@
 */
 if (!defined('IN_PHPBB'))
 {
-	exit;
+        exit;
 }
 if (empty($lang) || !is_array($lang))
 {
-	$lang = [];
+        $lang = [];
 }
 $lang = array_merge($lang, [
-	'ANP_DEFAULT'       => 'Anonim',
-	'ANP_MESSAGE'       => 'Anonim Gönderi',
-	'ANP_ACTION'        => 'Anonim olarak Gönder',
-        'ANP_PERMISSIONS'   => 'Anonim olarak gönderebilir',
+        'ANP_DEFAULT'           => 'Anonim',
+        'ANP_MESSAGE'           => 'Anonim Gönderi',
+        'ANP_ACTION'            => 'Anonim olarak gönder',
+        'ANP_PERMISSIONS'       => 'Anonim olarak gönderebilir',
+        'ANP_EDIT_PERMISSIONS'  => 'Anonim durumu düzenleyebilir',
 ]);
