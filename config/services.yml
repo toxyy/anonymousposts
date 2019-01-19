@@ -4,15 +4,14 @@ services:
         arguments:
             - '@language'
             - '@template'
+            - '@user'
             - '@auth'
             - '@request'
             - '@notification_manager'
-            - '@toxyy.anonymousposts.helper'
+            - '@toxyy.anonymousposts.driver'
         tags:
             - { name: event.listener }
-    toxyy.anonymousposts.helper:
-        class: toxyy\anonymousposts\core\helper
+    toxyy.anonymousposts.driver:
+        class: toxyy\anonymousposts\core\driver
         arguments:
-            - '@user'
             - '@dbal.conn'
-            - '@auth'

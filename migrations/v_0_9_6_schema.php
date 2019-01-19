@@ -26,4 +26,15 @@ class v_0_9_6_schema extends \phpbb\db\migration\migration
                         ),
                 );
         }
+
+        public function revert_schema()
+        {
+                return array(
+                        'add_columns'  => array(
+                                $this->table_prefix . 'posts'   => array(
+                                        'poster_id_backup' => array('UINT', 0),
+                                ),
+                        ),
+                );
+        }
 }
