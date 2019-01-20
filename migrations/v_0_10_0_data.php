@@ -33,7 +33,7 @@ class v_0_10_0_data extends \phpbb\db\migration\migration
         // see above
 	public function update_column_data()
 	{
-                $sql = "ALTER TABLE " . POSTS_TABLE . "
+                $sql = "ALTER TABLE " . TOPICS_TABLE . "
                         CHANGE topic_first_is_anonymous topic_first_anonymous_index MEDIUMINT(8) UNSIGNED NOT NULL DEFAULT '0'";
                 $this->db->sql_query($sql);
 	}
