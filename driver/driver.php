@@ -113,7 +113,6 @@ class driver
 			// redundancy to ensure NO anon 0s... too critical of a bug.
 			$new_index = ($row['new_index'] === 0) ? 1 : is_null($row['new_index']) ? 1 : $row['new_index'];
 		}
-		var_dump($anon_index_query);
 		$this->db->sql_freeresult($result);
 		return (($old_index > 0) ? $old_index : $new_index);
 	}
