@@ -85,7 +85,8 @@ class posting implements EventSubscriberInterface
 
 		// keep checkbox checked only if editing a post, otherwise it is unchecked by default
 		if ($event['mode'] === 'edit')
-		{	// don't allow non staff (by default at least) to edit anon status, makes webmasters happy
+		{
+			// don't allow non staff (by default at least) to edit anon status, makes webmasters happy
 			if (!($this->auth->acl_get('u_edit_anonpost') && $this->auth->acl_get('f_edit_anonpost', $event['forum_id'])))
 			{
 				$post_data['is_checked'] = $post_data['is_anonymous'];
@@ -156,7 +157,8 @@ class posting implements EventSubscriberInterface
 		$get_anon_index = function () use ($data, $post_mode) {
 			// anon index isn't updated when editing & toggling off anon, so return 0 isnt bad
 			if ($data['is_anonymous'])
-			{	// first post is always anon 1
+			{
+				// first post is always anon 1
 				if ($post_mode === 'post')
 				{
 					return 1;
