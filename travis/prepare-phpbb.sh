@@ -12,8 +12,7 @@
 set -e
 set -x
 
-EXTNAME=$1
-BRANCH=$2
+BRANCH=$1
 
 # Copy extension to a temp folder
 mkdir ../../tmp
