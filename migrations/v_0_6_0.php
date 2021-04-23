@@ -11,30 +11,42 @@ namespace toxyy\anonymousposts\migrations;
 
 class v_0_6_0 extends \phpbb\db\migration\migration
 {
-	static public function depends_on()
+	public function effectively_installed()
 	{
-		return array('\toxyy\anonymousposts\migrations\v_0_2_0');
+		return ($this->config['anonymous_posts_version'] >= 0.06);
 	}
 
-        public function update_schema()
-        {
-                return array(
-                        'add_columns'   => array(
-                                $this->table_prefix . 'posts'   => array(
-                                        'anonymous_index' => array('UINT', 0),
-                                ),
-                        ),
-                );
-        }
+	static public function depends_on()
+	{
+		return ['\toxyy\anonymousposts\migrations\release_0_1_0_data'];
+	}
 
-        public function revert_schema()
-        {
-                return array(
-                        'drop_columns'  => array(
-                                $this->table_prefix . 'posts'   => array(
-                                        'anonymous_index',
-                                ),
-                        ),
-                );
-        }
+	public function update_date()
+	{
+		return [
+			['config.update', ['anonymous_posts_version', '0.06']],
+		];
+	}
+
+	public function update_schema()
+	{
+		return [
+			'add_columns'   => [
+				$this->table_prefix . 'posts'   => [
+					'anonymous_index' => ['UINT', 0],
+				],
+			],
+		];
+	}
+
+	public function revert_schema()
+	{
+		return [
+			'drop_columns'  => [
+				$this->table_prefix . 'posts'   => [
+					'anonymous_index',
+				],
+			],
+		];
+	}
 }

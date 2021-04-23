@@ -11,44 +11,49 @@ namespace toxyy\anonymousposts\migrations;
 
 class v_0_9_5 extends \phpbb\db\migration\migration
 {
+	public function effectively_installed()
+	{
+		return ($this->config['anonymous_posts_version'] >= 0.095);
+	}
 	static public function depends_on()
 	{
-		return array('\toxyy\anonymousposts\migrations\v_0_6_1_data');
+		return ['\toxyy\anonymousposts\migrations\v_0_6_0'];
 	}
 
-        public function update_schema()
-        {
-                return array(
-                        'add_columns'   => array(
-                                $this->table_prefix . 'posts'   => array(
-                                        'poster_id_backup' => array('UINT', 0),
-                                ),
-                                $this->table_prefix . 'topics'   => array(
-                                        'topic_first_is_anonymous' => array('BOOL', 0),
-                                        'topic_last_anonymous_index' => array('UINT', 0),
-                                ),
-                                $this->table_prefix . 'forums'   => array(
-                                        'forum_anonymous_index' => array('UINT', 0),
-                                ),
-                        ),
-                );
-        }
+	public function update_date()
+	{
+		return [
+			['config.update', ['anonymous_posts_version', '0.095']],
+		];
+	}
 
-        public function revert_schema()
-        {
-                return array(
-                        'drop_columns'  => array(
-                                $this->table_prefix . 'posts'   => array(
-                                        'poster_id_backup',
-                                ),
-                                $this->table_prefix . 'topics'   => array(
-                                        'topic_first_is_anonymous',
-                                        'topic_last_anonymous_index',
-                                ),
-                                $this->table_prefix . 'forums'   => array(
-                                        'forum_anonymous_index',
-                                ),
-                        ),
-                );
-        }
+	public function update_schema()
+	{
+		return [
+			'add_columns'   => [
+				$this->table_prefix . 'topics'   => [
+					'topic_first_anonymous_index' => ['UINT', 0],
+					'topic_last_anonymous_index' => ['UINT', 0],
+				],
+				$this->table_prefix . 'forums'   => [
+					'forum_anonymous_index' => ['UINT', 0],
+				],
+			],
+		];
+	}
+
+	public function revert_schema()
+	{
+		return [
+			'drop_columns'  => [
+				$this->table_prefix . 'topics'   => [
+					'topic_first_anonymous_index',
+					'topic_last_anonymous_index',
+				],
+				$this->table_prefix . 'forums'   => [
+					'forum_anonymous_index',
+				],
+			],
+		];
+	}
 }

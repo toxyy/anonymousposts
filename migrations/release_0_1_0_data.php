@@ -13,46 +13,39 @@ class release_0_1_0_data extends \phpbb\db\migration\migration
 {
 	public function effectively_installed()
 	{
-		return isset($this->config['anonymous_posts']);
+		return isset($this->config['anonymous_posts_version']);
 	}
 
 	public function update_data()
 	{
-		return array(
+		return [
 			// Add configs
-			array('config.add', array('anonymous_posts', '0')),
-			array('config.add', array('anonymous_posts_limit', '5')),
-			array('config.add', array('anonymous_posts_hide', '')),
-			array('config.add', array('anonymous_posts_ignore', '')),
-			array('config.add', array('anonymous_posts_type', 'y')),
-			array('config.add', array('anonymous_posts_time', '365')),
-			array('config.add', array('anonymous_posts_version', '0.1.0')),
-
+			['config.add', ['anonymous_posts_version', '0.01']],
 			// Add permissions
-			array('permission.add', array('u_anonpost')),
-			array('permission.add', array('f_anonpost', false)),
-		);
+			['permission.add', ['u_anonpost']],
+			['permission.add', ['f_anonpost', false]],
+		];
 	}
 
-        public function update_schema()
-        {
-                return array(
-                        'add_columns'   => array(
-                                $this->table_prefix . 'posts'   => array(
-                                        'is_anonymous'  => array('BOOL', 0),
-                                ),
-                        ),
-                );
-        }
+	public function update_schema()
+	{
+		return [
+			'add_columns'   => [
+				$this->table_prefix . 'posts'   => [
+					'is_anonymous'  => ['BOOL', 0],
+				],
+			],
+		];
+	}
 
-        public function revert_schema()
-        {
-                return array(
-                        'drop_columns'  => array(
-                                $this->table_prefix . 'posts'   => array(
-                                        'is_anonymous',
-                                ),
-                        ),
-                );
-        }
+	public function revert_schema()
+	{
+		return [
+			'drop_columns'  => [
+				$this->table_prefix . 'posts'   => [
+					'is_anonymous',
+				],
+			],
+		];
+	}
 }
