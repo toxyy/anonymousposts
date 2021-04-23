@@ -104,7 +104,9 @@ class mcp_functions implements EventSubscriberInterface
 
 		$rowset = $event['rowset'];
 		foreach ($rowset as $row)
+		{
 			$update_sql[$row["{$type}_id"]][] = $type . $last . 'anonymous_index = ' . (int) ($row['is_anonymous'] ? $row['anonymous_index'] : 0);
+		}
 
 		$event['update_sql'] = $update_sql;
 	}
@@ -120,10 +122,14 @@ class mcp_functions implements EventSubscriberInterface
 
 		$anonymous_index = (int) ($row['is_anonymous'] ? $row['anonymous_index'] : 0);
 		if ($row['post_id'] === $topic_data[$topic_id]['first_post_id'])
+		{
 			$topic_data[$topic_id]['first_anonymous_index'] = $anonymous_index;
+		}
 
 		if ($row['post_id'] === $topic_data[$topic_id]['last_post_id'])
+		{
 			$topic_data[$topic_id]['last_anonymous_index'] = $anonymous_index;
+		}
 
 		$event['topic_data'] = $topic_data;
 	}

@@ -147,7 +147,9 @@ class main implements EventSubscriberInterface
 
 							// update edit message if the edit user id is equal to the poster's id
 							if ($generic_row['update_edit_message'] && $generic_row['EDITED_MESSAGE'])
+							{
 								$generic_row['EDITED_MESSAGE'] = $this->language->lang('EDITED_TIMES_TOTAL', (int) $generic_row['post_edit_count'], $anonymous_name, $this->user->format_date($generic_row['post_edit_time'], false, true));
+							}
 
 						break;
 						case 'posts_topicreview':
@@ -223,14 +225,21 @@ class main implements EventSubscriberInterface
 		];
 		if ($event['row']['is_anonymous'])
 		{
-			if ($event['row']['foe'] == '1') $event['rowset_data'] = ['foe' => '0', 'hide_post' => false] + $event['rowset_data'];
-			if ($event['row']['friend'] == '1') $event['row'] = ['friend' => '0'] + $event['row'];
+			if ($event['row']['foe'] == '1')
+			{
+				$event['rowset_data'] = ['foe' => '0', 'hide_post' => false] + $event['rowset_data'];
+			}
+			if ($event['row']['friend'] == '1')
+			{
+				$event['row'] = ['friend' => '0'] + $event['row'];
+			}
 		}
 	}
 
 	// delete info in anonymous posts for normal members
 	public function viewtopic_modify_post_row($event)
-	{	// delete info from the deleted post hidden div so sneaky members cant find out who it was
+	{
+		// delete info from the deleted post hidden div so sneaky members cant find out who it was
 		// i did this the opposite way first, then reversed it into this shorter list... nothing should be missing
 		$event['post_row'] += [
 			'anonymous_index'		=> $event['row']['anonymous_index'],
@@ -240,14 +249,19 @@ class main implements EventSubscriberInterface
 		];
 		$event['post_row'] = $this->row_handler($event['row']['is_anonymous'], $event['post_row'], 'posts_viewtopic');
 		// unique to this event
-		if ($event['row']['is_anonymous']) $event['cp_row'] = null;
+		if ($event['row']['is_anonymous'])
+		{
+			$event['cp_row'] = null;
+		}
 	}
 
 	// remove some extra info like emails from anonymous posts that get autoadded to the template after we scrub them the firs time
 	public function viewtopic_post_row_after($event)
 	{
 		if ($event['post_row']['IS_ANONYMOUS'] && !$event['post_row']['IS_STAFF'])
+		{
 			$this->template->alter_block_array('postrow.contact', [], ['ID' => 'email'], 'delete');
+		}
 	}
 
 	// update first and last post in topicrow if they are anonymous
@@ -292,7 +306,10 @@ class main implements EventSubscriberInterface
 		 * removes anonymous posts from "by author" search queries... unless the searcher is staff or searches himself
 		 * i haven't found search_key_array to actually help at all
 		 */
-		if (!$this->is_staff) $event['post_visibility'] .= ' AND IF(p.poster_id <> ' . $this->user->data['user_id'] . ', p.is_anonymous <> 1, p.poster_id = p.poster_id)';
+		if (!$this->is_staff)
+		{
+			$event['post_visibility'] .= ' AND IF(p.poster_id <> ' . $this->user->data['user_id'] . ', p.is_anonymous <> 1, p.poster_id = p.poster_id)';
+		}
 	}
 
 	// recalculate user's most active forum and topic count to remove anonymous posts, if it isn't their profile

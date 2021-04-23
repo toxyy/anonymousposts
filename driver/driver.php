@@ -94,7 +94,8 @@ class driver
 
 	// get unique poster index for consistent distinct anonymous posters
 	public function get_poster_index($topic_id, $poster_id)
-	{	// have we already anonymously posted in this topic?
+	{
+		// have we already anonymously posted in this topic?
 		// 0.9.12 - rewrote the whole thing
 		$anon_index_query = 'SELECT (	SELECT anonymous_index
 										FROM ' . POSTS_TABLE . "
@@ -201,7 +202,10 @@ class driver
 		$is_anonymous_list = array();
 		while ($row = $this->db->sql_fetchrow($result))
 		{
-			if ($row['is_anonymous']) $continue = true;
+			if ($row['is_anonymous'])
+			{
+				$continue = true;
+			}
 
 			$is_anonymous_list[$index][] = $row['is_anonymous'];
 			$is_anonymous_list[$index]['poster_id'] = $row['poster_id'];

@@ -36,13 +36,13 @@ class posting implements EventSubscriberInterface
 	/**
 	* Constructor
 	*
-	* @param \phpbb\language\language							$language
-	* @param \phpbb\template\template							$template
-	* @param \phpbb\user										$user
-	* @param \phpbb\auth\auth									$auth
-	* @param \phpbb\request\request								$request
-	* @param \phpbb\notification\manager						$notification_manager
-	* @param \toxyy\anonymousposts\driver\driver				$driver
+	* @param \phpbb\language\language						$language
+	* @param \phpbb\template\template						$template
+	* @param \phpbb\user									$user
+	* @param \phpbb\auth\auth								$auth
+	* @param \phpbb\request\request							$request
+	* @param \phpbb\notification\manager					$notification_manager
+	* @param \toxyy\anonymousposts\driver\driver			$driver
 	*
 	*/
 	public function __construct(
@@ -67,13 +67,13 @@ class posting implements EventSubscriberInterface
 	public static function getSubscribedEvents()
 	{
 		return [
-			'core.posting_modify_post_data'						=> 'posting_modify_post_data',
-			'core.posting_modify_template_vars'					=> 'posting_modify_template_vars',
-			'core.posting_modify_submit_post_before'			=> 'posting_modify_submit_post_before',
-			'core.posting_modify_quote_attributes'				=> 'posting_modify_quote_attributes',
-			'core.submit_post_modify_sql_data'					=> 'submit_post_modify_sql_data',
-			'core.modify_submit_notification_data'				=> 'modify_submit_notification_data',
-			'core.notification_manager_add_notifications'		=> 'notification_manager_add_notifications',
+			'core.posting_modify_post_data'					=> 'posting_modify_post_data',
+			'core.posting_modify_template_vars'				=> 'posting_modify_template_vars',
+			'core.posting_modify_submit_post_before'		=> 'posting_modify_submit_post_before',
+			'core.posting_modify_quote_attributes'			=> 'posting_modify_quote_attributes',
+			'core.submit_post_modify_sql_data'				=> 'submit_post_modify_sql_data',
+			'core.modify_submit_notification_data'			=> 'modify_submit_notification_data',
+			'core.notification_manager_add_notifications'	=> 'notification_manager_add_notifications',
 		];
 	}
 
@@ -129,10 +129,14 @@ class posting implements EventSubscriberInterface
 			$checkbox_attributes = '';
 			// don't allow non staff (by default at least) to edit anon status, makes webmasters happy
 			if ($is_editing && !($this->auth->acl_get('f_edit_anonpost', $event['forum_id']) && $this->auth->acl_get('u_edit_anonpost')))
+			{
 				$checkbox_attributes = 'disabled';
+			}
 
 			if ($event['post_data']['is_anonymous'] || $event['post_data']['is_checked'])
+			{
 				$checkbox_attributes = 'checked ' . $checkbox_attributes;
+			}
 
 			$this->template->assign_vars(['POST_IS_ANONYMOUS' => $checkbox_attributes]);
 		}
@@ -153,9 +157,15 @@ class posting implements EventSubscriberInterface
 			// anon index isn't updated when editing & toggling off anon, so return 0 isnt bad
 			if ($data['is_anonymous'])
 			{	// first post is always anon 1
-				if ($post_mode === 'post') return 1;
+				if ($post_mode === 'post')
+				{
+					return 1;
+				}
 				// are we editing? (this is or was an anon post, unless it is 0 anon index stays set forever)
-				if ($data['anonymous_index'] > 0) return $data['anonymous_index'];
+				if ($data['anonymous_index'] > 0)
+				{
+					return $data['anonymous_index'];
+				}
 				// get a new one then
 				return $this->driver->get_poster_index($data['topic_id'], ($post_mode === 'quote' ? (int) $this->user->data['user_id'] : $data['poster_id']));
 			}
@@ -165,14 +175,23 @@ class posting implements EventSubscriberInterface
 		$data['anonymous_index'] = $get_anon_index();
 		$data['forum_last_post_id'] = $event['post_data']['forum_last_post_id'];
 		// these two are for checking if when posting/replying not anonymously and there are indices to update
-		if ($event['post_data']['topic_last_anonymous_index'] > 0) $data['topic_last_anonymous_index'] = $event['post_data']['topic_last_anonymous_index'];
-		if ($event['post_data']['forum_anonymous_index'] > 0) $data['forum_anonymous_index'] = $event['post_data']['forum_anonymous_index'];
+		if ($event['post_data']['topic_last_anonymous_index'] > 0)
+		{
+			$data['topic_last_anonymous_index'] = $event['post_data']['topic_last_anonymous_index'];
+		}
+		if ($event['post_data']['forum_anonymous_index'] > 0)
+		{
+			$data['forum_anonymous_index'] = $event['post_data']['forum_anonymous_index'];
+		}
 		// data for unsetting anonymous post
 		if ($data['was_anonymous'])
 		{
 			$data['fixed_poster_id'] = $event['post_data']['poster_id_backup'];
 			$data['username_backup'] = $this->driver->get_username($data['fixed_poster_id']);
-			if (!$data['is_anonymous']) $event['post_author_name'] = $event['post_data']['topic_last_poster_name'];
+			if (!$data['is_anonymous'])
+			{
+				$event['post_author_name'] = $event['post_data']['topic_last_poster_name'];
+			}
 		}
 		$event['data'] = $data;
 	}
@@ -180,7 +199,10 @@ class posting implements EventSubscriberInterface
 	// removes user id when quoting an anonymous post
 	public function posting_modify_quote_attributes($event)
 	{
-		if ($event['post_data']['is_anonymous']) $event->update_subarray('quote_attributes', 'user_id', ANONYMOUS);
+		if ($event['post_data']['is_anonymous'])
+		{
+			$event->update_subarray('quote_attributes', 'user_id', ANONYMOUS);
+		}
 	}
 
 	// handle all postmodes and add appropriate data to the database
@@ -206,10 +228,14 @@ class posting implements EventSubscriberInterface
 			case ['reply', false, false]:
 			case ['quote', false, false]:
 				if (isset($data['topic_last_anonymous_index']))
+				{
 					$sql_data[TOPICS_TABLE]['stat']['topic_last_anonymous_index'] = 'topic_last_anonymous_index = ' . 0;
+				}
 			case ['post', false, false]:
 				if (isset($data['forum_anonymous_index']))
+				{
 					$sql_data[FORUMS_TABLE]['stat']['forum_anonymous_index'] = 'forum_anonymous_index = ' . 0;
+				}
 
 			break;
 			/*
@@ -230,7 +256,9 @@ class posting implements EventSubscriberInterface
 				{
 					$sql_data[TOPICS_TABLE]['stat']['topic_last_anonymous_index'] = 'topic_last_anonymous_index = ' . $data['anonymous_index'];
 					if (isset($modify_forum_anon_index) || $data['post_id'] == $data['forum_last_post_id'])
+					{
 						$sql_data[FORUMS_TABLE]['stat']['forum_anonymous_index'] = 'forum_anonymous_index = ' . $data['anonymous_index'];
+					}
 				}
 			case ['edit', true, false]:
 				$sql_data[POSTS_TABLE]['sql']['anonymous_index'] = $data['anonymous_index'];
@@ -255,10 +283,14 @@ class posting implements EventSubscriberInterface
 			case ['edit_last_post', false, true]:
 				$first_post_has_topic_info = ($post_mode === 'edit_first_post' && isset($first_post_has_topic_info));
 				if ($first_post_has_topic_info || $post_mode !== 'edit_first_post')
+				{
 					$sql_data[TOPICS_TABLE]['stat']['topic_last_anonymous_index'] = 'topic_last_anonymous_index = ' . 0;
+				}
 
 				if ($first_post_has_topic_info || $data['post_id'] == $data['forum_last_post_id'])
+				{
 					$sql_data[FORUMS_TABLE]['stat']['forum_anonymous_index'] = 'forum_anonymous_index = ' . 0;
+				}
 			case ['edit', false, true]:
 				// if you search posts per user id, if anon status is toggled on, they still appear in results even if anonymous
 				$this->driver->destroy_cache([], [$data['poster_id'], $user_id]);
@@ -268,7 +300,10 @@ class posting implements EventSubscriberInterface
 			*/
 			case ['edit_topic', true, true]:
 			case ['edit_first_post', true, true]:
-				if ($is_anonymous) $sql_data[TOPICS_TABLE]['stat']['topic_first_poster_name'] = 'topic_first_poster_name = \'' . $data['username_backup'] . '\'';
+				if ($is_anonymous)
+				{
+					$sql_data[TOPICS_TABLE]['stat']['topic_first_poster_name'] = 'topic_first_poster_name = \'' . $data['username_backup'] . '\'';
+				}
 			case ['edit_last_post', true, true]:
 			case ['edit', true, true]:
 				// posts table doesnt have this because poster id was set to 1 to make links unclickable
@@ -291,8 +326,8 @@ class posting implements EventSubscriberInterface
 			case ['edit', true]:
 				// poster id likely already anonymous when is_anonymous is true, id rather be sure and redo it here
 				$event['notification_data'] = [
-					'poster_id'			=> $event['data_ary']['is_anonymous'] ? ANONYMOUS : $event['data_ary']['poster_id'],
-					'post_username'		=> $event['data_ary']['is_anonymous'] ? ($this->language->lang('ANP_DEFAULT') . ' ' . $event['data_ary']['anonymous_index']) : $event['data_ary']['username_backup'],
+					'poster_id'		=> $event['data_ary']['is_anonymous'] ? ANONYMOUS : $event['data_ary']['poster_id'],
+					'post_username'	=> $event['data_ary']['is_anonymous'] ? ($this->language->lang('ANP_DEFAULT') . ' ' . $event['data_ary']['anonymous_index']) : $event['data_ary']['username_backup'],
 				] + $event['notification_data'];
 			break;
 		}
@@ -300,7 +335,8 @@ class posting implements EventSubscriberInterface
 
 	// fix notifying users who posted anonymously if people have quoted them
 	public function notification_manager_add_notifications($event)
-	{	// adapted from phpbb/textformatter/s9e/utils.php get_outermost_quote_authors function
+	{
+		// adapted from phpbb/textformatter/s9e/utils.php get_outermost_quote_authors function
 		if ($event['notification_type_name'] == 'notification.type.quote')
 		{
 			$data = $event['data'];
@@ -325,8 +361,12 @@ class posting implements EventSubscriberInterface
 
 				// is_anonymous_list[][1] is the author_id
 				foreach ($quote_data as $index => $value)
+				{
 					if ((bool) $is_anonymous_list[$index][0])
+					{
 						$quote_authors->item($index)->nodeValue = $is_anonymous_list[$index][1];
+					}
+				}
 
 				// save the usernames back into the post_text we just got
 				$data['post_text'] = $dom->saveXML();
