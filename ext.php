@@ -24,8 +24,8 @@ class ext extends base
 		// don't need this anymore, but i want to keep the code
 		$is_enableable = true;
 
-        /*$ext_manager->is_enabled('marttiphpbb/grouptempvars');
-        // if not enableable, add our custom install error language keys
+		/*$ext_manager->is_enabled('marttiphpbb/grouptempvars');
+		// if not enableable, add our custom install error language keys
 		if (!$is_enableable)
 		{
 			$lang = $this->container->get('language');
