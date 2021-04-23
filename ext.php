@@ -14,7 +14,7 @@ use phpbb\extension\base;
 class ext extends base
 {
 	/**
-	* phpBB 3.2.x and PHP 7+
+	* phpBB 3.3.x and PHP 7+
 	*/
 	public function is_enableable()
 	{
@@ -33,7 +33,7 @@ class ext extends base
 		}*/
 
 		// check phpbb and phpbb versions
-		$is_enableable = ($is_enableable && (phpbb_version_compare($config['version'], '3.2', '>=') && version_compare(PHP_VERSION, '7', '>=')));
+		$is_enableable = ($is_enableable && (phpbb_version_compare($config['version'], '3.3', '>=') && version_compare(PHP_VERSION, '7', '>=')));
 
 		return $is_enableable;
 	}
