@@ -4,7 +4,7 @@
 	"description": "Post anonymously in phpbb 3.3",
 	"homepage": "https://github.com/toxyy/anonymousposts",
 	"version": "0.11.1",
-	"time": "2020-04-23",
+	"time": "2021-04-23",
 	"keywords": ["phpbb", "extension", "anonymous", "anonymous posts"],
 	"license": "GPL-2.0-only",
 	"authors": [
