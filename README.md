@@ -4,7 +4,7 @@
 
 ## Requirements
 
-phpBB 3.3.4-RC1+ PHP 7+
+phpBB 3.3.5-RC1+ PHP 7+
 
 ticket 15819 (merged) - https://github.com/phpbb/phpbb/pull/5388
 
