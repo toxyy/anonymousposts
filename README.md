@@ -6,15 +6,7 @@
 
 phpBB 3.3.5-RC1+ PHP 7+
 
-ticket 15819 (merged) - https://github.com/phpbb/phpbb/pull/5388
-
-ticket 15841 (merged) - https://github.com/phpbb/phpbb/pull/5417
-
-ticket 15872 (merged) - https://github.com/phpbb/phpbb/pull/5443
-
-ticket 15879 (merged) - https://github.com/phpbb/phpbb/pull/5455
-
-ticket 15925 - https://github.com/phpbb/phpbb/pull/5505
+ticket 15925 (merged in 3.3.5) - https://github.com/phpbb/phpbb/pull/5505
 
 ## Features
 
