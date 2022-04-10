@@ -6,8 +6,6 @@
 
 phpBB 3.3.5-RC1+ PHP 7+
 
-ticket 15925 (merged in 3.3.5) - https://github.com/phpbb/phpbb/pull/5505
-
 ## Features
 
 Post anonymously in topics as a user.  All user information is hidden from users, except to staff, who have a special view.
