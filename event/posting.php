@@ -82,6 +82,7 @@ class posting implements EventSubscriberInterface
 	{
 		$post_data = $event['post_data'];
 		$post_data['is_checked'] = $this->request->variable('anonpost', 0);
+		$is_anonymous = !isset($post_data['is_anonymous']) ? false : $post_data['is_anonymous'];
 
 		// keep checkbox checked only if editing a post, otherwise it is unchecked by default
 		if ($event['mode'] === 'edit')
@@ -89,10 +90,10 @@ class posting implements EventSubscriberInterface
 			// don't allow non staff (by default at least) to edit anon status, makes webmasters happy
 			if (!($this->auth->acl_get('u_edit_anonpost') && $this->auth->acl_get('f_edit_anonpost', $event['forum_id'])))
 			{
-				$post_data['is_checked'] = $post_data['is_anonymous'];
+				$post_data['is_checked'] = $is_anonymous;
 			}
 		}
-		if ($post_data['is_anonymous'])
+		if ($is_anonymous)
 		{
 			$post_data['poster_id_backup'] = $post_data['poster_id'];
 			$post_data['quote_username'] = $this->language->lang('ANP_DEFAULT') . ' ' . $post_data['anonymous_index'];
@@ -106,15 +107,17 @@ class posting implements EventSubscriberInterface
 	public function posting_modify_template_vars($event)
 	{
 		$is_editing = $event['mode'] === 'edit';
+		$is_anonymous = !isset($event['post_data']['is_anonymous']) ? false : $event['post_data']['is_anonymous'];
+		$s_poll_data = !isset($event['page_data']['S_POLL_DATA']) ? '' : $event['page_data']['S_POLL_DATA'];
 		$event['page_data'] = [
 			'S_DISPLAY_USERNAME'	=> ((!$this->user->data['is_registered'] ||
 				($is_editing &&
-					(!$event['post_data']['is_anonymous'] &&
+					(!$is_anonymous &&
 						($event['post_data']['poster_id'] == ANONYMOUS)
 					)
 				)
 			) ? 1 : 0),
-			'S_POLL_DELETE'			=> (!$event['post_data']['is_anonymous'] ? $event['page_data']['S_POLL_DATA'] :
+			'S_POLL_DELETE'			=> (!$is_anonymous ? $s_poll_data :
 				($is_editing && count($event['post_data']['poll_options']) &&
 					((!$event['post_data']['poll_last_vote'] &&
 							$event['post_data']['poster_id_backup'] == $this->user->data['user_id'] &&
@@ -134,7 +137,7 @@ class posting implements EventSubscriberInterface
 				$checkbox_attributes = 'disabled';
 			}
 
-			if ($event['post_data']['is_anonymous'] || $event['post_data']['is_checked'])
+			if ($is_anonymous || $event['post_data']['is_checked'])
 			{
 				$checkbox_attributes = 'checked ' . $checkbox_attributes;
 			}
