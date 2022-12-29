@@ -29,6 +29,8 @@ Support for Recent Topics extension by PayBas/Sajaki (https://www.phpbb.com/cust
 
 ## Screenshot
 
+Permissions in some screenshots may not reflect results in others.
+
 ![alt text](https://i.snag.gy/J6qsbE.jpg)
 
 ![alt text](https://i.snag.gy/jfS8NP.jpg)
