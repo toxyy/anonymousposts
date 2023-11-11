@@ -19,7 +19,7 @@ if (empty($lang) || !is_array($lang))
 }
 
 $lang = array_merge($lang, [
-	'ANP_DEFAULT'				=> 'Anonymous/<br>Anonimno',
+	'ANP_DEFAULT'				=> 'Anonimno',
 	'ANP_MESSAGE'				=> 'Anonimna objava',
 	'ANP_ACTION'				=> 'Objavi anonimno',
 	'ANP_PERMISSIONS'			=> 'Lahko objavi anonimno',
