@@ -112,7 +112,7 @@ class driver
 		{
 			$old_index = is_null($row['old_index']) ? 0 : $row['old_index'];
 			// redundancy to ensure NO anon 0s... too critical of a bug.
-			$new_index = ($row['new_index'] === 0) ? 1 : ((is_null($row['new_index']) ? 1 : $row['new_index']));
+			$new_index = ($row['new_index'] === 0) ? 1 : (is_null($row['new_index']) ? 1 : $row['new_index']);
 		}
 		$this->db->sql_freeresult($result);
 		return (($old_index > 0) ? $old_index : $new_index);
@@ -191,6 +191,11 @@ class driver
 	// get data from topicrow to use in the event to change it
 	public function is_anonymous($post_list)
 	{
+		if (empty($post_list))
+		{
+			return array();
+		}
+
 		$is_anonymous_query = 'SELECT anonymous_index, is_anonymous, poster_id
 								FROM ' . POSTS_TABLE . '
 								WHERE ' . $this->db->sql_in_set('post_id', $post_list) . '
