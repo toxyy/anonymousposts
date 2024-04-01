@@ -70,6 +70,7 @@ class posting implements EventSubscriberInterface
 			'core.posting_modify_post_data'					=> 'posting_modify_post_data',
 			'core.posting_modify_template_vars'				=> 'posting_modify_template_vars',
 			'core.posting_modify_submit_post_before'		=> 'posting_modify_submit_post_before',
+			'core.modify_submit_post_data'					=> 'modify_submit_post_data',
 			'core.posting_modify_quote_attributes'			=> 'posting_modify_quote_attributes',
 			'core.submit_post_modify_sql_data'				=> 'submit_post_modify_sql_data',
 			'core.modify_submit_notification_data'			=> 'modify_submit_notification_data',
@@ -146,38 +147,40 @@ class posting implements EventSubscriberInterface
 		}
 	}
 
+	// fixed to return 1 for new topics, and mean it this time... wouldn't work sometimes for some weird reason
+	public function get_anon_index($data, $post_mode) {
+		// anon index isn't updated when editing & toggling off anon, so return 0 isnt bad
+		if ($data['is_anonymous'])
+		{
+			// first post is always anon 1
+			if ($post_mode === 'post')
+			{
+				return 1;
+			}
+			// are we editing? (this is or was an anon post, unless it is 0 anon index stays set forever)
+			if ($data['anonymous_index'] > 0)
+			{
+				return $data['anonymous_index'];
+			}
+			// get a new one then
+			return $this->driver->get_poster_index($data['topic_id'], ($post_mode === 'quote' ? (int) $this->user->data['user_id'] : $data['poster_id']));
+		}
+		// default value
+		return 0;
+	}
+
 	// add variables to $data for use in submit_post_modify_sql_data
 	public function posting_modify_submit_post_before($event)
 	{
 		$data = $event['data'];
+		$post_mode = $event['mode'];
 		// get checkbox value
 		$data['is_anonymous'] = $event['post_data']['is_checked'];
 
-		$post_mode = $event['mode'];
 		$data['was_anonymous'] = ($post_mode === 'edit') ? $event['post_data']['is_anonymous'] : 0;
 		$data['anonymous_index'] = ($post_mode === 'edit') ? $event['post_data']['anonymous_index'] : 0;
-		// fixed to return 1 for new topics, and mean it this time... wouldn't work sometimes for some weird reason
-		$get_anon_index = function () use ($data, $post_mode) {
-			// anon index isn't updated when editing & toggling off anon, so return 0 isnt bad
-			if ($data['is_anonymous'])
-			{
-				// first post is always anon 1
-				if ($post_mode === 'post')
-				{
-					return 1;
-				}
-				// are we editing? (this is or was an anon post, unless it is 0 anon index stays set forever)
-				if ($data['anonymous_index'] > 0)
-				{
-					return $data['anonymous_index'];
-				}
-				// get a new one then
-				return $this->driver->get_poster_index($data['topic_id'], ($post_mode === 'quote' ? (int) $this->user->data['user_id'] : $data['poster_id']));
-			}
-			// default value
-			return 0;
-		};
-		$data['anonymous_index'] = $get_anon_index();
+
+		$data['anonymous_index'] = $this->get_anon_index($data, $post_mode);
 		$data['forum_last_post_id'] = $event['post_data']['forum_last_post_id'];
 		// these two are for checking if when posting/replying not anonymously and there are indices to update
 		if ($event['post_data']['topic_last_anonymous_index'] > 0)
@@ -198,6 +201,18 @@ class posting implements EventSubscriberInterface
 				$event['post_author_name'] = $event['post_data']['topic_last_poster_name'];
 			}
 		}
+		$event['data'] = $data;
+	}
+
+	// redundant functionality from posting_modify_submit_post_before for compatibility with extensions that use submit_post
+	public function modify_submit_post_data($event)
+	{
+		$data = $event['data'];
+		$post_mode = $event['mode'];
+		// get checkbox value
+		$data['is_anonymous'] = $this->request->variable('anonpost', 0);
+		$data['anonymous_index'] = $this->get_anon_index($data, $post_mode);
+
 		$event['data'] = $data;
 	}
 
