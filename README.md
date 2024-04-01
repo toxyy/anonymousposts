@@ -27,6 +27,8 @@ Support for Normal and Special Ranks extension by kasimi/posey (https://www.phpb
 
 Support for Recent Topics extension by PayBas/Sajaki (https://www.phpbb.com/customise/db/extension/recent_topics_2/)
 
+Support for New Topic After X Posts extension by Татьяна5 (https://www.phpbb.com/community/viewtopic.php?t=2590876) (if this extension is updated to a version higher than 0.0.3 to address the bug report I filed, I will need to do more testing to confirm there no more breakage with Anonymous Posts, by the way)
+
 ## Screenshot
 
 Permissions in some screenshots may not reflect results in others.
