@@ -17,6 +17,10 @@ class driver
 	protected $cache;
 	/** @var \phpbb\config */
 	protected $config;
+	/** @var string */
+	public $is_staff;
+	/** @var string */
+	public $force_anonymous_posts;
 
 	/**
 	* Constructor
@@ -35,6 +39,8 @@ class driver
 		$this->db = $db;
 		$this->cache = $cache;
 		$this->config = $config;
+		$this->is_staff = false;
+		$this->force_anonymous_posts = false;
 	}
 
 	/**

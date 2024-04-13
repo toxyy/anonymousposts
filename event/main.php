@@ -66,9 +66,9 @@ class main implements EventSubscriberInterface
 		return [
 			'core.user_setup'										=> 'core_user_setup',
 			'core.user_setup_after'									=> 'user_setup_after',
-			'core.viewtopic_assign_template_vars_before'			=> 'assign_template_vars',
+			'core.viewtopic_assign_template_vars_before'			=> [['assign_topic_template_vars'], ['assign_template_vars']],
 			'core.mcp_global_f_read_auth_after'						=> 'assign_template_vars',
-			'core.modify_posting_auth'								=> 'assign_template_vars',
+			'core.modify_posting_auth'								=> [['modify_posting_auth'], ['assign_template_vars']],
 			'core.ucp_main_topiclist_topic_modify_template_vars'	=> 'ucp_bookmarked_and_subscribed_modify_topicrow',
 			'core.mcp_topic_review_modify_row'						=> 'mcp_topic_review_modify_row',
 			'core.topic_review_modify_row'							=> 'topic_review_modify_row',
@@ -100,6 +100,7 @@ class main implements EventSubscriberInterface
 	public function user_setup_after()
 	{
 		$this->is_staff = $this->auth->acl_gets('a_', 'm_');
+		$this->driver->is_staff = $this->is_staff;
 		$this->anonymous = $this->language->lang('ANP_DEFAULT');
 	}
 
@@ -187,6 +188,43 @@ class main implements EventSubscriberInterface
 			}
 		}
 		return $generic_rowset;
+	}
+
+	// add booleans to viewtopic.php for the quickreply box
+	public function assign_topic_template_vars($event)
+	{
+		$u_anonpost = $this->auth->acl_get('u_anonpost');
+		$anp_post_force = $event['topic_data']['anp_post_force'];
+		$anp_ignore_post_permissions = $event['topic_data']['anp_ignore_post_permissions'];
+		$force_anonymous_posts = ($anp_post_force && ($u_anonpost || $anp_ignore_post_permissions));
+		$this->driver->force_anonymous_posts = $force_anonymous_posts;
+
+		$checkbox_attributes = '';
+		// don't allow non staff (by default at least) to edit anon status, makes webmasters happy
+		if (!($this->auth->acl_get('f_edit_anonpost', $event['forum_id']) && $this->auth->acl_get('u_edit_anonpost')))
+		{
+			$checkbox_attributes = 'disabled';
+		}
+
+		if ($force_anonymous_posts)
+		{
+			$checkbox_attributes = 'checked ' . $checkbox_attributes;
+		}
+
+		$this->template->assign_vars([
+			'S_ANP_POST_FORCE'				=> $anp_post_force,
+			'S_ANP_IGNORE_POST_PERMISSIONS'	=> $anp_ignore_post_permissions,
+			'POST_IS_ANONYMOUS'				=> $checkbox_attributes,
+		]);
+	}
+
+	public function modify_posting_auth($event)
+	{
+		$u_anonpost = $this->auth->acl_get('u_anonpost');
+		$anp_post_force = $event['post_data']['anp_post_force'];
+		$anp_ignore_post_permissions = $event['post_data']['anp_ignore_post_permissions'];
+		$force_anonymous_posts = ($anp_post_force && ($u_anonpost || $anp_ignore_post_permissions));
+		$this->driver->force_anonymous_posts = $force_anonymous_posts;
 	}
 
 	// add F_ANONPOST variable to viewtopic.php, mcp.php, and posting.php

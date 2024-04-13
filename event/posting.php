@@ -110,15 +110,22 @@ class posting implements EventSubscriberInterface
 		$is_editing = $event['mode'] === 'edit';
 		$is_anonymous = !isset($event['post_data']['is_anonymous']) ? false : $event['post_data']['is_anonymous'];
 		$s_poll_data = !isset($event['page_data']['S_POLL_DATA']) ? '' : $event['page_data']['S_POLL_DATA'];
+
+		$u_anonpost = $this->auth->acl_get('u_anonpost');
+		$anp_post_force = $event['post_data']['anp_post_force'];
+		$anp_ignore_post_permissions = $event['post_data']['anp_ignore_post_permissions'];
+		$force_anonymous_posts = ($anp_post_force && ($u_anonpost || $anp_ignore_post_permissions));
+		$this->driver->force_anonymous_posts = $force_anonymous_posts;
+
 		$event['page_data'] = [
-			'S_DISPLAY_USERNAME'	=> ((!$this->user->data['is_registered'] ||
+			'S_DISPLAY_USERNAME'				=> ((!$this->user->data['is_registered'] ||
 				($is_editing &&
 					(!$is_anonymous &&
 						($event['post_data']['poster_id'] == ANONYMOUS)
 					)
 				)
 			) ? 1 : 0),
-			'S_POLL_DELETE'			=> (!$is_anonymous ? $s_poll_data :
+			'S_POLL_DELETE'						=> (!$is_anonymous ? $s_poll_data :
 				($is_editing && count($event['post_data']['poll_options']) &&
 					((!$event['post_data']['poll_last_vote'] &&
 							$event['post_data']['poster_id_backup'] == $this->user->data['user_id'] &&
@@ -127,18 +134,24 @@ class posting implements EventSubscriberInterface
 					)
 				)
 			),
+			'S_ANP_POST_FORCE'					=> $anp_post_force,
+			'S_ANP_IGNORE_POST_PERMISSIONS'		=> $anp_ignore_post_permissions,
 		] + $event['page_data'];
 		// keep checkbox checked if someone posts before you're done... might work for if your post was edited too, haven't tested
-		if ($is_editing || $event['preview'] || !empty($event['error']) || (!$event['submit'] && $event['refresh'] && $this->template->retrieve_var('S_POST_REVIEW')))
+		if ($is_editing || $event['preview'] || !empty($event['error']) || (!$event['submit'] && $event['refresh'] && $this->template->retrieve_var('S_POST_REVIEW'))
+			|| $force_anonymous_posts
+		)
 		{
 			$checkbox_attributes = '';
 			// don't allow non staff (by default at least) to edit anon status, makes webmasters happy
-			if ($is_editing && !($this->auth->acl_get('f_edit_anonpost', $event['forum_id']) && $this->auth->acl_get('u_edit_anonpost')))
+			if (($is_editing && !($this->auth->acl_get('f_edit_anonpost', $event['forum_id']) && $this->auth->acl_get('u_edit_anonpost')))
+				|| (!$this->auth->acl_get('u_edit_anonpost') && $force_anonymous_posts)
+			)
 			{
 				$checkbox_attributes = 'disabled';
 			}
 
-			if ($is_anonymous || $event['post_data']['is_checked'])
+			if ($is_anonymous || $event['post_data']['is_checked'] || (!$this->driver->is_staff && $force_anonymous_posts))
 			{
 				$checkbox_attributes = 'checked ' . $checkbox_attributes;
 			}
@@ -148,7 +161,8 @@ class posting implements EventSubscriberInterface
 	}
 
 	// fixed to return 1 for new topics, and mean it this time... wouldn't work sometimes for some weird reason
-	public function get_anon_index($data, $post_mode) {
+	public function get_anon_index($data, $post_mode)
+	{
 		// anon index isn't updated when editing & toggling off anon, so return 0 isnt bad
 		if ($data['is_anonymous'])
 		{
@@ -182,8 +196,9 @@ class posting implements EventSubscriberInterface
 
 		$data['anonymous_index'] = $this->get_anon_index($data, $post_mode);
 		$data['forum_last_post_id'] = $event['post_data']['forum_last_post_id'];
+
 		// these two are for checking if when posting/replying not anonymously and there are indices to update
-		if ($event['post_data']['topic_last_anonymous_index'] > 0)
+		if (isset($event['post_data']['topic_last_anonymous_index']) && $data['topic_visibility'] && $data['post_visibility'] && $event['post_data']['topic_last_anonymous_index'] > 0)
 		{
 			$data['topic_last_anonymous_index'] = $event['post_data']['topic_last_anonymous_index'];
 		}
@@ -210,7 +225,7 @@ class posting implements EventSubscriberInterface
 		$data = $event['data'];
 		$post_mode = $event['mode'];
 		// get checkbox value
-		$data['is_anonymous'] = $this->request->variable('anonpost', 0);
+		$data['is_anonymous'] = $this->request->variable('anonpost', 0) || (!$this->driver->is_staff && $this->driver->force_anonymous_posts);
 		$data['anonymous_index'] = $this->get_anon_index($data, $post_mode);
 
 		$event['data'] = $data;
@@ -360,41 +375,44 @@ class posting implements EventSubscriberInterface
 		if ($event['notification_type_name'] == 'notification.type.quote')
 		{
 			$data = $event['data'];
-			$xml = $data['message'];
-			if (!(strpos($xml, '<QUOTE ') === false))
+			if (isset($data['message']))
 			{
-				$quote_data = array();
-				$dom = new \DOMDocument;
-				$dom->loadXML($xml);
-				$xpath = new \DOMXPath($dom);
-				// stores all outermost quote attributes in an array[x][y], where x is the outermost quote index
-				$count = 0;
-				foreach ($xpath->query('//QUOTE[not(ancestor::QUOTE)]/@*') as $element)
-				{	// add some value to count for the first case of author, so the next index......idk if this is a good way to do this
-					$count += ($element->nodeName == 'author') ? ($count == 0 ? 0.6 : 1) : 0;
-					$quote_data[floor($count)][$element->nodeName] = $element->nodeValue;
-				}
-				// get second xpath query to preserve index order to match is_anonymous_list
-				// if their sizes dont match, for some reason a quote doesn't have an author... would there even be a notification?
-				$quote_authors = $xpath->query('//QUOTE[not(ancestor::QUOTE)]/@author');
-				$is_anonymous_list = $this->driver->is_anonymous(array_column($quote_data, 'post_id'));
-
-				// is_anonymous_list[][1] is the author_id
-				foreach ($quote_data as $index => $value)
+				$xml = $data['message'];
+				if (!(strpos($xml, '<QUOTE ') === false))
 				{
-					if ((bool) $is_anonymous_list[$index][0])
-					{
-						$quote_authors->item($index)->nodeValue = $is_anonymous_list[$index][1];
+					$quote_data = array();
+					$dom = new \DOMDocument;
+					$dom->loadXML($xml);
+					$xpath = new \DOMXPath($dom);
+					// stores all outermost quote attributes in an array[x][y], where x is the outermost quote index
+					$count = 0;
+					foreach ($xpath->query('//QUOTE[not(ancestor::QUOTE)]/@*') as $element)
+					{	// add some value to count for the first case of author, so the next index......idk if this is a good way to do this
+						$count += ($element->nodeName == 'author') ? ($count == 0 ? 0.6 : 1) : 0;
+						$quote_data[floor($count)][$element->nodeName] = $element->nodeValue;
 					}
+					// get second xpath query to preserve index order to match is_anonymous_list
+					// if their sizes dont match, for some reason a quote doesn't have an author... would there even be a notification?
+					$quote_authors = $xpath->query('//QUOTE[not(ancestor::QUOTE)]/@author');
+					$is_anonymous_list = $this->driver->is_anonymous(array_column($quote_data, 'post_id'));
+	
+					// is_anonymous_list[][1] is the author_id
+					foreach ($quote_data as $index => $value)
+					{
+						if ((bool) $is_anonymous_list[$index][0])
+						{
+							$quote_authors->item($index)->nodeValue = $is_anonymous_list[$index][1];
+						}
+					}
+	
+					// save the usernames back into the post_text we just got
+					$data['post_text'] = $dom->saveXML();
 				}
-
-				// save the usernames back into the post_text we just got
-				$data['post_text'] = $dom->saveXML();
+				// should this be in the if statement above?
+				$event['notify_users'] = $this->notification_manager->get_item_type_class($event['notification_type_name'])
+					->find_users_for_notification($data, $event['options'])
+				;	
 			}
-			// should this be in the if statement above?
-			$event['notify_users'] = $this->notification_manager->get_item_type_class($event['notification_type_name'])
-				->find_users_for_notification($data, $event['options'])
-			;
 		}
 	}
 }

@@ -1,0 +1,17 @@
+<fieldset>
+	<legend>{{ lang('ANP_SETTINGS') }}</legend>
+	<dl>
+		<dt><label for="anp_post_force">{{ lang('ANP_POST_FORCE') ~ lang('COLON') }}</label><br /><span>{{ lang('ANP_POST_FORCE_EXPLAIN') }}</span></dt>
+		<dd>
+			<label><input type="radio" class="radio" name="anp_post_force" value="1"{% if S_ANP_POST_FORCE %} id="anp_post_force" checked="checked"{% endif %} /> {{ lang('YES') }}</label>
+			<label><input type="radio" class="radio" name="anp_post_force" value="0"{% if not S_ANP_POST_FORCE %} id="anp_post_force" checked="checked"{% endif %} /> {{ lang('NO') }}</label>
+		</dd>
+	</dl>
+	<dl>
+		<dt><label for="anp_ignore_post_permissions">{{ lang('ANP_IGNORE_POST_PERMISSIONS') ~ lang('COLON') }}</label><br /><span>{{ lang('ANP_IGNORE_POST_PERMISSIONS_EXPLAIN') }}</span></dt>
+		<dd>
+			<label><input type="radio" class="radio" name="anp_ignore_post_permissions" value="1"{% if S_ANP_IGNORE_POST_PERMISSIONS %} id="anp_ignore_post_permissions" checked="checked"{% endif %} /> {{ lang('YES') }}</label>
+			<label><input type="radio" class="radio" name="anp_ignore_post_permissions" value="0"{% if not S_ANP_IGNORE_POST_PERMISSIONS %} id="anp_ignore_post_permissions" checked="checked"{% endif %} /> {{ lang('NO') }}</label>
+		</dd>
+	</dl>
+</fieldset>

@@ -1,4 +1,11 @@
 services:
+    toxyy.anonymousposts.acp_functions:
+        class: toxyy\anonymousposts\event\acp_functions
+        arguments:
+            - '@language'
+            - '@request'
+        tags:
+            - { name: event.listener }
     toxyy.anonymousposts.main:
         class: toxyy\anonymousposts\event\main
         arguments:
@@ -7,6 +14,12 @@ services:
             - '@user'
             - '@auth'
             - '@content.visibility'
+            - '@toxyy.anonymousposts.driver'
+        tags:
+            - { name: event.listener }
+    toxyy.anonymousposts.mcp_functions:
+        class: toxyy\anonymousposts\event\mcp_functions
+        arguments:
             - '@toxyy.anonymousposts.driver'
         tags:
             - { name: event.listener }
@@ -19,12 +32,6 @@ services:
             - '@auth'
             - '@request'
             - '@notification_manager'
-            - '@toxyy.anonymousposts.driver'
-        tags:
-            - { name: event.listener }
-    toxyy.anonymousposts.mcp_functions:
-        class: toxyy\anonymousposts\event\mcp_functions
-        arguments:
             - '@toxyy.anonymousposts.driver'
         tags:
             - { name: event.listener }

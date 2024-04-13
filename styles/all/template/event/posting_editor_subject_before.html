@@ -1,4 +1,4 @@
-{% if F_ANONPOST && U_ANONPOST %}
+{% if (F_ANONPOST && U_ANONPOST) || (S_ANP_POST_FORCE && (U_ANONPOST || S_ANP_IGNORE_POST_PERMISSIONS)) %}
 <dl style="clear: left;">
 	<dt><label for="anonpost">{{ lang('ANP_ACTION') }}{L_COLON}</label></dt>
 	<dd>
