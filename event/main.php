@@ -142,6 +142,7 @@ class main implements EventSubscriberInterface
 							$generic_row['SIGNATURE'] = $generic_row['POSTER_AGE'] = $generic_row['POSTER_WARNINGS'] =
 							$generic_row['POSTER_AVATAR'] = $generic_row['POSTER_POSTS'] = $generic_row['POSTER_JOINED'] =
 							$generic_row['RANK_IMG_SRC'] = $generic_row['RANK_IMG'] = $generic_row['RANK_TITLE'] =
+							$generic_row['USER_VERIFIED'] =
 							// next 3 add support for the Normal and Special Ranks extension
 							$generic_row['EXTRA_RANK_IMG_SRC'] = $generic_row['EXTRA_RANK_IMG'] = $generic_row['EXTRA_RANK_TITLE'] =
 							$generic_row['U_POST_AUTHOR'] = null;
