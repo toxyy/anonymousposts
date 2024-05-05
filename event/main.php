@@ -287,7 +287,7 @@ class main implements EventSubscriberInterface
 		];
 		$event['post_row'] = $this->row_handler($event['row']['is_anonymous'], $event['post_row'], 'posts_viewtopic');
 		// unique to this event
-		if ($event['row']['is_anonymous'])
+		if ($event['row']['is_anonymous'] && !$event['post_row']['IS_STAFF'])
 		{
 			$event['cp_row'] = null;
 		}
