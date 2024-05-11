@@ -58,7 +58,7 @@ class acp_functions implements EventSubscriberInterface
 	{
 		if ($event['action'] == 'add')
 		{
-			$event->update_subarray('forum_data', 'anp_ignore_post_permissions', false);
+			$event->update_subarray('forum_data', 'anp_post_force', false);
 			$event->update_subarray('forum_data', 'anp_ignore_post_permissions', false);
 		}
 	}
